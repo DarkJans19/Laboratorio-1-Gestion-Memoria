@@ -1,0 +1,112 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f0f4f8;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.titulo {
+  margin: 0;
+  padding: 20px;
+  text-align: center;
+  background-color: #1e3a8a;
+  color: white;
+}
+
+.contenedor {
+  display: flex;
+  flex: 1;
+}
+
+/* Menú lateral */
+.menu {
+  background-color: #1e3a8a;
+  padding: 20px;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.menu button {
+  padding: 12px 15px;
+  margin: 10px 0;
+  font-size: 15px;
+  color: #fff;
+  background-color: #3b82f6;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.3s ease;
+}
+
+.menu button:hover {
+  background-color: #2563eb;
+}
+
+/* Zona de memoria */
+.memoria {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;          /* centrar horizontalmente */
+  justify-content: center;      /* centrar verticalmente */
+}
+
+.memoria-box {
+  width: 400px;                /* ancho mayor */
+  height: 600px;               /* alto visible */
+  display: flex;
+  flex-direction: column;
+  border: 3px solid #333;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.bloque {
+  flex: 1;
+  border-bottom: 1px solid #aaa;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.so {
+  background-color: #1e40af;
+  color: white;
+}
+
+.proceso {
+  background-color: #10b981;
+  color: white;
+}
+
+.libre {
+  background-color: #e5e7eb;
+  color: #333;
+}
+
+/* Botón reiniciar */
+#reiniciar {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  font-size: 16px;
+  background-color: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#reiniciar:hover {
+  background-color: #b91c1c;
+}
