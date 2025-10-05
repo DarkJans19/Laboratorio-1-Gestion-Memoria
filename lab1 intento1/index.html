@@ -7,7 +7,7 @@
 </head>
 <body>
   <h1 class="titulo">Simulación gestión de memoria</h1>
-
+  
   <div class="contenedor">
     <div class="menu">
       <button id="b1">Partición</button>
@@ -17,13 +17,23 @@
     </div>
 
     <div class="memoria">
-      <div class="memoria-box">
-        <div class="bloque so">SO</div>
-        <div class="bloque proceso">P1</div>
-        <div class="bloque proceso">P2</div>
-        <div class="bloque libre">Libre</div>
-        <div class="bloque proceso">P3</div>
-        <div class="bloque libre">Libre</div>
+      <div class="memoria-contenido">
+        <div class="info-eleccion">
+          <ul>
+            <li id="tipo-particion">Partición: —</li>
+            <li id="tipo-algoritmo">Algoritmo: —</li>
+            <li id="lista-procesos">Procesos: —</li>
+          </ul>
+        </div>
+
+        <div class="memoria-contenedor">
+          <div class="etiquetas-memoria">
+            <!-- Las etiquetas se generarán dinámicamente -->
+          </div>
+          <div class="memoria-box">
+            <!-- Los bloques se generarán dinámicamente -->
+          </div>
+        </div>
       </div>
     </div>
   </div>
