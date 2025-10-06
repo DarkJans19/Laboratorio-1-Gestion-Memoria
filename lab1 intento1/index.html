@@ -10,10 +10,10 @@
   
   <div class="contenedor">
     <div class="menu">
-      <button id="b1">Partición</button>
-      <button id="b2">Algoritmo</button>
-      <button id="b3">Añadir Proceso</button>
-      <button id="b4">Eliminar Proceso</button>
+      <button id="btn-particion">Partición</button>
+      <button id="btn-algoritmo">Algoritmo</button>
+      <button id="btn-anadir-proceso">Añadir Proceso</button>
+      <button id="btn-eliminar-proceso">Eliminar Proceso</button>
     </div>
 
     <div class="memoria">
@@ -27,27 +27,23 @@
         </div>
 
         <div class="memoria-contenedor">
-          <div class="etiquetas-memoria">
-            <!-- Las etiquetas se generarán dinámicamente -->
-          </div>
-          <div class="memoria-box">
-            <!-- Los bloques se generarán dinámicamente -->
-          </div>
+          <div class="etiquetas-memoria"></div>
+          <div class="memoria-box"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <button id="reiniciar">Reiniciar</button>
+  <button id="btn-reiniciar">Reiniciar</button>
 
   <div id="menu-particion" class="ventana-oculta">
     <div class="ventana-contenido">
       <h2>Elegir tipo de partición</h2>
       <ul>
-        <li><button>Estática de tamaño fijo</button></li>
-        <li><button>Estática de tamaño variable</button></li>
-        <li><button>Dinámica (sin compactación)</button></li>
-        <li><button>Dinámica (con compactación)</button></li>
+        <li><button id="btn-particion-fija">Estática de tamaño fijo</button></li>
+        <li><button id="btn-particion-variable">Estática de tamaño variable</button></li>
+        <li><button id="btn-particion-dinamica-sin">Dinámica (sin compactación)</button></li>
+        <li><button id="btn-particion-dinamica-con">Dinámica (con compactación)</button></li>
       </ul>
       <button id="cerrar-particion">Cerrar</button>
     </div>
@@ -57,9 +53,9 @@
     <div class="ventana-contenido">
       <h2>Elegir algoritmo de asignación</h2>
       <ul>
-        <li><button>Primer ajuste</button></li>
-        <li><button>Mejor ajuste</button></li>
-        <li><button>Peor ajuste</button></li>
+        <li><button id="btn-primer-ajuste">Primer ajuste</button></li>
+        <li><button id="btn-mejor-ajuste">Mejor ajuste</button></li>
+        <li><button id="btn-peor-ajuste">Peor ajuste</button></li>
       </ul>
       <button id="cerrar-algoritmo">Cerrar</button>
     </div>
@@ -68,12 +64,12 @@
   <div id="menu-anadirproceso" class="ventana-oculta">
     <div class="ventana-contenido">
       <h2>Añadir nuevo proceso</h2>
-      <form>
-        <label for="nombre">Nombre del proceso:</label><br>
-        <input type="text" id="nombre"><br><br>
-        <label for="tamano">Tamaño (KiB):</label><br>
-        <input type="number" id="tamano"><br><br>
-        <button type="button">Agregar</button>
+      <form id="form-anadir-proceso">
+        <label for="nombre-proceso">Nombre del proceso:</label><br>
+        <input type="text" id="nombre-proceso"><br><br>
+        <label for="tamano-proceso">Tamaño (KiB):</label><br>
+        <input type="number" id="tamano-proceso"><br><br>
+        <button id="btn-agregar-proceso" type="button">Agregar</button>
       </form>
       <button id="cerrar-anadir">Cerrar</button>
     </div>
@@ -82,19 +78,26 @@
   <div id="menu-eliminar-proceso" class="ventana-oculta">
     <div class="ventana-contenido">
       <h2>Eliminar proceso</h2>
-      <form>
+      <form id="form-eliminar-proceso">
         <label for="proceso-eliminar">Seleccione proceso:</label><br>
         <select id="proceso-eliminar">
           <option value="P1">P1</option>
           <option value="P2">P2</option>
           <option value="P3">P3</option>
         </select><br><br>
-        <button type="button">Eliminar</button>
+        <button id="btn-eliminar-proceso-form" type="button">Eliminar</button>
       </form>
       <button id="cerrar-eliminar">Cerrar</button>
     </div>
   </div>
 
-  <script src="script.js"></script>
+ <script src="primerajuste.js"></script>
+<script src="mejorajuste.js"></script>
+<script src="peorajuste.js"></script>
+<script src="estaticafija.js"></script>
+<script src="dinamicasincomp.js"></script>
+<script src="script.js"></script>
+
+
 </body>
 </html>
