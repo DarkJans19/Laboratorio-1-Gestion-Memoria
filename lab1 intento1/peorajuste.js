@@ -9,3 +9,11 @@ function peorAjusteDinamico(tamano) {
   });
   return peor;
 }
+
+function peorAjusteFijo(particionesLibres, tamanoProceso) {
+    return particionesLibres.reduce((peor, actual) => {
+        const sobrantePeor = peor.tamano - tamanoProceso;
+        const sobranteActual = actual.tamano - tamanoProceso;
+        return sobranteActual > sobrantePeor ? actual : peor;
+    });
+}

@@ -15,7 +15,6 @@ function inicializarDinamicaSinCompactacion() {
   actualizarMemoria();
 }
 
-
 function precargarProgramasDinamicos() {
   if (!algoritmoElegido) {
     console.log("No se puede precargar sin algoritmo seleccionado");
@@ -23,9 +22,6 @@ function precargarProgramasDinamicos() {
   }
 
   console.log("Precargando programas con algoritmo:", algoritmoElegido);
-
-  let exitosos = 0;
-  let fallidos = 0;
 
   PROGRAMAS_PREDEFINIDOS.forEach(p => {
     const resultado = asignarProcesoDinamicaSinCompactacion(
@@ -88,16 +84,38 @@ function asignarProcesoDinamicaSinCompactacion(proceso, algoritmo) {
   return true;
 }
 
+/**
+ * Fusiona bloques de memoria adyacentes que estén libres
+ * @param {number} indice - Índice del primer bloque a fusionar
+ * @returns {boolean} - true si se pudo fusionar, false en caso contrario
+ */
+function fusionarBloques(indice) {
+  let fusionable = false;
+  
+  if (indice >= 0 && (indice + 1) < memoria.length) {
+    fusionable = !memoria[indice].ocupado && !memoria[indice + 1].ocupado;
+  }
+  
+  if (fusionable) {
+    const tamanoSiguiente = memoria[indice + 1].tamano;
+    memoria[indice].tamano += tamanoSiguiente;
+    memoria.splice(indice + 1, 1);
+  }
+  
+  return fusionable;
+}
+
 function eliminarProcesoDinamicaSinCompactacion(nombreProceso) {
+  let indiceEliminado = -1;
   let eliminado = false;
 
   for (let i = 0; i < memoria.length; i++) {
     const bloque = memoria[i];
     if (bloque.ocupado && bloque.proceso?.nombre === nombreProceso) {
-
       bloque.ocupado = false;
       bloque.tipo = 'libre';
       bloque.proceso = null;
+      indiceEliminado = i;
       eliminado = true;
       procesos = procesos.filter(p => !p.startsWith(`${nombreProceso} (`));
       break;
@@ -106,9 +124,25 @@ function eliminarProcesoDinamicaSinCompactacion(nombreProceso) {
 
   if (!eliminado) return false;
 
+  // Fusionar con bloques adyacentes después de la eliminación
+  let fusionesRealizadas = 0;
+  
+  // Fusionar con el bloque izquierdo
+  if (indiceEliminado > 0) {
+    if (fusionarBloques(indiceEliminado - 1)) {
+      fusionesRealizadas++;
+      indiceEliminado--;
+    }
+  }
+  
+  // Fusionar con el bloque derecho
+  if (indiceEliminado < memoria.length - 1) {
+    if (fusionarBloques(indiceEliminado)) {
+      fusionesRealizadas++;
+    }
+  }
 
   actualizarMemoria();
-
   return true;
 }
 
@@ -119,3 +153,4 @@ function recalcularInicios() {
     inicioActual += b.tamano;
   });
 }
+

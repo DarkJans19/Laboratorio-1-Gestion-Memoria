@@ -7,15 +7,11 @@ function primerAjusteDinamico(tamano) {
   return -1;
 }
 
-function primerAjuste(espaciosLibres, tamanoProceso) {
-  for (let i = 0; i < espaciosLibres.length; i++) {
-    if (espaciosLibres[i].tamano >= tamanoProceso) {
-      return {
-        encontrado: true,
-        indice: i,
-        espacio: espaciosLibres[i]
-      };
+function primerAjusteFijo(memoria, tamanoProceso) {
+    for (const bloque of memoria) {
+        if (bloque.tipo === 'particion' && !bloque.ocupado && bloque.tamano >= tamanoProceso) {
+            return bloque;
+        }
     }
-  }
-  return { encontrado: false };
+    return null;
 }
