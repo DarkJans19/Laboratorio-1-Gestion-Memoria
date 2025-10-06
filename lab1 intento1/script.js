@@ -1,458 +1,292 @@
-const b1 = document.getElementById("b1");
-const b2 = document.getElementById("b2");
-const b3 = document.getElementById("b3");
-const b4 = document.getElementById("b4");
+const MEMORIA_TOTAL_MiB = 16;
+const MEMORIA_TOTAL_KiB = MEMORIA_TOTAL_MiB * 1024;
+const TAMANO_PARTICION_MiB = 1;
+const TAMANO_PARTICION_KiB = TAMANO_PARTICION_MiB * 1024;
 
-const tipoParticion = document.getElementById("tipo-particion");
-const tipoAlgoritmo = document.getElementById("tipo-algoritmo");
-const listaProcesos = document.getElementById("lista-procesos");
+const PROGRAMAS_PREDEFINIDOS = [
+  { nombre: 'Notepad', tamano: 225 },
+  { nombre: 'Word', tamano: 287 },
+  { nombre: 'Excel', tamano: 309 },
+  { nombre: 'AutoCAD', tamano: 436 },
+  { nombre: 'Calculadora', tamano: 209 }
+];
 
+// VARIABLES GLOBALES
 let particionElegida = null;
 let algoritmoElegido = null;
 let memoria = [];
 let procesos = [];
+
+// REFERENCIAS DOM
+const tipoParticion = document.getElementById("tipo-particion");
+const tipoAlgoritmo = document.getElementById("tipo-algoritmo");
+const listaProcesos = document.getElementById("lista-procesos");
 
 const menuParticion = document.getElementById("menu-particion");
 const menuAlgoritmo = document.getElementById("menu-algoritmo");
 const menuAnadirP = document.getElementById("menu-anadirproceso");
 const menuEliminarP = document.getElementById("menu-eliminar-proceso");
 
-const cerrarParticion = document.getElementById("cerrar-particion");
-const cerrarAlgoritmo = document.getElementById("cerrar-algoritmo");
-const cerrarAnadir = document.getElementById("cerrar-anadir");
-const cerrarEliminar = document.getElementById("cerrar-eliminar");
+const reiniciar = document.getElementById("btn-reiniciar");
 
-const reiniciar = document.getElementById("reiniciar");
-
-const MEMORIA_TOTAL_MiB = 16;
-const MEMORIA_TOTAL_KiB = MEMORIA_TOTAL_MiB * 1024; 
-const TAMANO_PARTICION_MiB = 1;
-const TAMANO_PARTICION_KiB = TAMANO_PARTICION_MiB * 1024; 
-
-const PROGRAMAS_PREDEFINIDOS = [
-    { nombre: 'Notepad', tamano: 225 },    
-    { nombre: 'Word', tamano: 287 },    
-    { nombre: 'Excel', tamano: 309 },     
-    { nombre: 'AutoCAD', tamano: 436 },   
-    { nombre: 'Calculadora', tamano: 209 } 
-];
-
-// Particiones estáticas fijas
-
-function inicializarParticionesFijas() {
-    memoria = [];
-    
-    // Sistema Operativo
-    memoria.push({
-        tipo: 'SO',
-        nombre: 'Sistema Operativo',
-        tamano: 1024,
-        ocupado: true,
-        proceso: { nombre: 'SO', tamano: 1024 }
-    });
-
-    for (let i = 1; i <= 15; i++) {
-        memoria.push({
-            tipo: 'particion', 
-            nombre: `Partición ${i}`,
-            tamano: 1024,
-            ocupado: false,
-            proceso: null,
-            fragmentacionInterna: 0
-        });
-    }
-    asignarProgramasPredeterminados();
-}
-
-function asignarProgramasPredeterminados() {
-    let programasAsignados = 0;
-    
-    PROGRAMAS_PREDEFINIDOS.forEach(programa => {
-        if (programasAsignados < 5) {
-            const proceso = { nombre: programa.nombre, tamano: programa.tamano };
-
-            const particionesLibres = memoria.filter(bloque => 
-                bloque.tipo === 'particion' && !bloque.ocupado
-            );
-            
-            if (particionesLibres.length > 0 && proceso.tamano <= TAMANO_PARTICION_KiB) {
-                const particion = particionesLibres[0];
-                particion.ocupado = true;
-                particion.proceso = proceso;
-                particion.fragmentacionInterna = TAMANO_PARTICION_KiB - proceso.tamano;
-                
-                procesos.push(`${programa.nombre} (${programa.tamano} KiB)`);
-                programasAsignados++;
-            }
-        }
-    });
-    
-    actualizarVisualizacionMemoria();
-    actualizarListaProcesos();
-}
-
-function asignarProcesoEstaticaFija(proceso, algoritmo) {
-    if (algoritmo !== 'Primer ajuste') {
-        alert(`ERROR: En partición estática fija solo se puede usar "Primer ajuste".\nAlgoritmo seleccionado: "${algoritmo}"`);
-        return false;
-    }
-    
-    // VALIDACIONES MEJORADAS
-    if (proceso.tamano <= 0) {
-        alert(`ERROR: El tamaño debe ser mayor a 0 KiB`);
-        return false;
-    }
-    
-    if (proceso.tamano > TAMANO_PARTICION_KiB) {
-        alert(`ERROR: El proceso ${proceso.nombre} requiere ${proceso.tamano} KiB pero las particiones son de ${TAMANO_PARTICION_KiB} KiB`);
-        return false;
-    }
-
-    let particionSeleccionada = null;
-    
-    for (let i = 0; i < memoria.length; i++) {
-        const bloque = memoria[i];
-        if (bloque.tipo === 'particion' && !bloque.ocupado) {
-            particionSeleccionada = bloque;
-            break; 
-        }
-    }
-    
-    if (!particionSeleccionada) {
-        alert("No hay particiones libres disponibles");
-        return false;
-    }
-    
-    particionSeleccionada.ocupado = true;
-    particionSeleccionada.proceso = proceso;
-    particionSeleccionada.fragmentacionInterna = TAMANO_PARTICION_KiB - proceso.tamano;
-    return true;
-}
-
-function eliminarProcesoEstaticaFija(nombreProceso) {
-    let procesoEliminado = false;
-    
-    memoria.forEach(bloque => {
-        if (bloque.ocupado && bloque.proceso && bloque.proceso.nombre === nombreProceso) {
-            bloque.ocupado = false;
-            bloque.proceso = null;
-            bloque.fragmentacionInterna = 0;
-            procesoEliminado = true;
-
-            procesos = procesos.filter(p => !p.startsWith(`${nombreProceso} (`));
-        }
-    });
-    
-    if (procesoEliminado) {
-        actualizarVisualizacionMemoria();
-        actualizarListaProcesos();
-        return true;
-    }
-    
-    return false;
-}
-
-// Funciones de visualización
-
+// FUNCIONES DE VISUALIZACIÓN
 function actualizarVisualizacionMemoria() {
-    const memoriaBox = document.querySelector('.memoria-box');
-    const etiquetasMemoria = document.querySelector('.etiquetas-memoria');
-    
-    memoriaBox.innerHTML = '';
-    etiquetasMemoria.innerHTML = '';
-    
-    memoria.forEach((bloque, index) => {
-        const div = document.createElement('div');
-        div.className = `bloque ${bloque.tipo === 'SO' ? 'so' : bloque.ocupado ? 'proceso' : 'libre'}`;
-        
-        let contenido = '';
-        if (bloque.tipo === 'SO') {
-            contenido = 'SO';
-        } else if (bloque.ocupado && bloque.proceso) {
-            contenido = `${bloque.proceso.nombre}\n${bloque.proceso.tamano} KiB`;
-        } else {
-            contenido = 'Libre';
-        }
-        
-        div.textContent = contenido;
-        memoriaBox.appendChild(div);
-        
-        // Crear etiqueta al lado izquierdo - SIEMPRE MOSTRAR TAMAÑO FIJO
-        const etiqueta = document.createElement('div');
-        etiqueta.className = 'etiqueta-bloque';
-        
-        let textoEtiqueta = '';
-        if (bloque.tipo === 'SO') {
-            textoEtiqueta = 'SO\n1024 KiB';
-        } else {
-            textoEtiqueta = `${bloque.tamano} KiB`;
-        }
-        
-        etiqueta.textContent = textoEtiqueta;
-        etiquetasMemoria.appendChild(etiqueta);
-    });
+  const memoriaBox = document.querySelector('.memoria-box');
+  const etiquetasMemoria = document.querySelector('.etiquetas-memoria');
+
+  memoriaBox.innerHTML = '';
+  etiquetasMemoria.innerHTML = '';
+
+memoria.forEach(bloque => {
+  const div = document.createElement('div');
+  div.className = `bloque ${bloque.tipo === 'SO' ? 'so' : bloque.ocupado ? 'proceso' : 'libre'}`;
+
+  const altura = (bloque.tamano / MEMORIA_TOTAL_KiB) * 600; 
+  div.style.height = `${altura}px`;
+
+  const contenido = bloque.tipo === 'SO'
+    ? 'SO'
+    : bloque.ocupado
+      ? `${bloque.proceso.nombre}\n${bloque.proceso.tamano} KiB`
+      : 'Libre';
+  div.textContent = contenido;
+  memoriaBox.appendChild(div);
+
+  const etiqueta = document.createElement('div');
+  etiqueta.className = 'etiqueta-bloque';
+  etiqueta.textContent = `${bloque.inicio} - ${bloque.inicio + bloque.tamano} KiB`;
+  etiquetasMemoria.appendChild(etiqueta);
+});
+
 }
 
 function actualizarListaProcesos() {
-    listaProcesos.textContent = `Procesos: ${procesos.length > 0 ? procesos.join(", ") : "—"}`;
-}
-
-function asignarProceso(proceso) {
-    if (!particionElegida || !algoritmoElegido) {
-        alert("Primero selecciona tipo de partición y algoritmo");
-        return false;
-    }
-    
-    let resultado = false;
-    
-    switch(particionElegida) {
-        case 'Estática de tamaño fijo':
-            resultado = asignarProcesoEstaticaFija(proceso, algoritmoElegido);
-            break;
-            
-        case 'Estática de tamaño variable':
-            alert("Funcionalidad para particiones variables en desarrollo");
-            return false;
-            
-        case 'Dinámica (sin compactación)':
-        case 'Dinámica (con compactación)':
-            alert("Funcionalidad para particiones dinámicas en desarrollo");
-            return false;
-    }
-    
-    return resultado;
-}
-
-function eliminarProceso(nombreProceso) {
-    if (!particionElegida) {
-        alert("Primero selecciona tipo de partición");
-        return false;
-    }
-    
-    let resultado = false;
-    
-    switch(particionElegida) {
-        case 'Estática de tamaño fijo':
-            resultado = eliminarProcesoEstaticaFija(nombreProceso);
-            break;
-            
-        case 'Estática de tamaño variable':
-            alert("Funcionalidad para particiones variables en desarrollo");
-            return false;
-            
-        default:
-            alert("Funcionalidad para este tipo de partición en desarrollo");
-            return false;
-    }
-    
-    return resultado;
+  listaProcesos.textContent = `Procesos: ${procesos.length > 0 ? procesos.join(", ") : "—"}`;
 }
 
 function mostrarInformacionMemoria() {
-    const infoEleccion = document.querySelector('.info-eleccion');
-    
-    const particionesLibres = memoria.filter(b => b.tipo === 'particion' && !b.ocupado).length;
-    const memoriaUsada = memoria.reduce((total, bloque) => 
-        bloque.ocupado ? total + (bloque.proceso?.tamano || 0) : total, 0
-    );
-    
-    const fragmentacionInterna = memoria.reduce((total, bloque) => 
-        total + (bloque.fragmentacionInterna || 0), 0
-    );
-
-    const html = `
-        <ul>
-            <li id="tipo-particion">Partición: ${particionElegida || '—'}</li>
-            <li id="tipo-algoritmo">Algoritmo: ${algoritmoElegido || '—'}</li>
-            <li>Particiones libres: ${particionesLibres}</li>
-            <li>Memoria usada: ${memoriaUsada} KiB</li>
-            <li>Fragmentación interna: ${fragmentacionInterna} KiB</li>
-        </ul>
-    `;
-    
-    infoEleccion.innerHTML = html;
+  const infoEleccion = document.querySelector('.info-eleccion');
+  const html = `
+    <ul>
+      <li id="tipo-particion">Partición: ${particionElegida || '—'}</li>
+      <li id="tipo-algoritmo">Algoritmo: ${algoritmoElegido || '—'}</li>
+      <li id="lista-procesos">Procesos: ${procesos.length > 0 ? procesos.join(", ") : "—"}</li>
+    </ul>
+  `;
+  infoEleccion.innerHTML = html;
 }
 
-// Event listeners
+function refrescarVista() {
+  actualizarVisualizacionMemoria();
+  actualizarListaProcesos();
+  mostrarInformacionMemoria();
+}
 
-b1.addEventListener("click", () => {
-    if (!particionElegida) menuParticion.style.display = "flex";
-    else alert("Reinicia para volver a escoger partición");
+// FUNCIONES DE ASIGNACIÓN
+function asignarProceso(proceso) {
+  if (!particionElegida || !algoritmoElegido) {
+    alert("Primero selecciona tipo de partición y algoritmo");
+    return false;
+  }
+
+  switch (particionElegida) {
+    case 'Estática de tamaño fijo':
+      return asignarProcesoEstaticaFija(proceso, algoritmoElegido);
+    case 'Dinámica (sin compactación)':
+      return asignarProcesoDinamicaSinCompactacion(proceso, algoritmoElegido);
+    default:
+      alert("Funcionalidad en desarrollo");
+      return false;
+  }
+}
+
+function eliminarProceso(nombreProceso) {
+  if (!particionElegida) {
+    alert("Primero selecciona tipo de partición");
+    return false;
+  }
+
+  switch (particionElegida) {
+    case 'Estática de tamaño fijo':
+      return eliminarProcesoEstaticaFija(nombreProceso);
+    case 'Dinámica (sin compactación)':
+      return eliminarProcesoDinamicaSinCompactacion(nombreProceso);
+    default:
+      alert("Funcionalidad en desarrollo");
+      return false;
+  }
+}
+
+// EVENTOS DE MENÚ PRINCIPAL
+document.getElementById("btn-particion").addEventListener("click", () => {
+  if (!particionElegida) menuParticion.style.display = "flex";
+  else alert("Reinicia para volver a escoger partición");
 });
 
-b2.addEventListener("click", () => {
-    if (!particionElegida) {
-        alert("Primero selecciona el tipo de partición");
-        return;
-    }
-    if (!algoritmoElegido) menuAlgoritmo.style.display = "flex";
-    else alert("Reinicia para volver a escoger algoritmo");
+document.getElementById("btn-algoritmo").addEventListener("click", () => {
+  if (!particionElegida) return alert("Primero selecciona el tipo de partición");
+  if (!algoritmoElegido) menuAlgoritmo.style.display = "flex";
+  else alert("Reinicia para volver a escoger algoritmo");
 });
 
-b3.addEventListener("click", () => {
-    if (!particionElegida || !algoritmoElegido) {
-        alert("Primero selecciona partición y algoritmo");
-        return;
-    }
-    menuAnadirP.style.display = "flex";
+document.getElementById("btn-anadir-proceso").addEventListener("click", () => {
+  if (!particionElegida || !algoritmoElegido)
+    return alert("Primero selecciona partición y algoritmo");
+  menuAnadirP.style.display = "flex";
 });
 
-b4.addEventListener("click", () => {
-    if (!particionElegida) {
-        alert("Primero selecciona tipo de partición");
-        return;
-    }
+document.getElementById("btn-eliminar-proceso").addEventListener("click", () => {
+  if (!particionElegida) return alert("Primero selecciona tipo de partición");
 
-    const select = document.getElementById("proceso-eliminar");
-    select.innerHTML = ''; // Limpiar opciones anteriores
+  const select = document.getElementById("proceso-eliminar");
+  select.innerHTML = '';
 
-    const procesosActivos = memoria
-        .filter(bloque => bloque.ocupado && bloque.proceso && bloque.proceso.nombre !== 'SO')
-        .map(bloque => bloque.proceso);
+  const procesosActivos = memoria.filter(b =>
+    b.ocupado && b.proceso && b.proceso.nombre !== 'SO'
+  ).map(b => b.proceso);
 
-    const procesosUnicos = [];
-    const nombresVistos = new Set();
-    
-    procesosActivos.forEach(proceso => {
-        if (!nombresVistos.has(proceso.nombre)) {
-            nombresVistos.add(proceso.nombre);
-            procesosUnicos.push(proceso);
-        }
+  const nombres = new Set();
+  const unicos = procesosActivos.filter(p => !nombres.has(p.nombre) && nombres.add(p.nombre));
+
+  if (unicos.length === 0) {
+    select.innerHTML = '<option value="">No hay procesos para eliminar</option>';
+  } else {
+    unicos.forEach(p => {
+      const option = document.createElement('option');
+      option.value = p.nombre;
+      option.textContent = `${p.nombre} (${p.tamano} KiB)`;
+      select.appendChild(option);
     });
-    
-    if (procesosUnicos.length === 0) {
-        const option = document.createElement('option');
-        option.value = "";
-        option.textContent = "No hay procesos para eliminar";
-        select.appendChild(option);
-    } else {
-        procesosUnicos.forEach(proceso => {
-            const option = document.createElement('option');
-            option.value = proceso.nombre;
-            option.textContent = `${proceso.nombre} (${proceso.tamano} KiB)`;
-            select.appendChild(option);
-        });
-    }
-    
-    menuEliminarP.style.display = "flex";
+  }
+
+  menuEliminarP.style.display = "flex";
 });
 
-cerrarParticion.addEventListener("click", () => menuParticion.style.display = "none");
-cerrarAlgoritmo.addEventListener("click", () => menuAlgoritmo.style.display = "none");
-cerrarAnadir.addEventListener("click", () => menuAnadirP.style.display = "none");
-cerrarEliminar.addEventListener("click", () => menuEliminarP.style.display = "none");
+// EVENTOS SECUNDARIOS
+document.querySelectorAll('[id^="cerrar-"]').forEach(btn => {
+  btn.addEventListener("click", () => {
+    btn.closest(".ventana-oculta").style.display = "none";
+  });
+});
 
+// Seleccionar partición
 document.querySelectorAll("#menu-particion ul button").forEach(btn => {
-    btn.addEventListener("click", () => {
-        particionElegida = btn.textContent;
-        tipoParticion.textContent = `Partición: ${particionElegida}`;
-        
-        if (particionElegida === 'Estática de tamaño fijo') {
-            algoritmoElegido = 'Primer ajuste';
-            tipoAlgoritmo.textContent = `Algoritmo: ${algoritmoElegido}`;
-            inicializarParticionesFijas();
-        } else if (particionElegida === 'Estática de tamaño variable') {
-
-            algoritmoElegido = null;
-            tipoAlgoritmo.textContent = "Algoritmo: —";
-            alert("Particiones variables en desarrollo - usa Estática fija por ahora");
-            return;
-        }
-        
-        actualizarVisualizacionMemoria();
-        mostrarInformacionMemoria();
-        menuParticion.style.display = "none";
-    });
-});
-
-document.querySelectorAll("#menu-algoritmo ul button").forEach(btn => {
-    btn.addEventListener("click", () => {
-        const algoritmoSeleccionado = btn.textContent;
-        
-        if (particionElegida === 'Estática de tamaño fijo' && algoritmoSeleccionado !== 'Primer ajuste') {
-            alert(`ERROR: En partición estática fija solo se puede usar "Primer ajuste".\nEl algoritmo ya está establecido automáticamente.`);
-            return;
-        }
-        
-        algoritmoElegido = algoritmoSeleccionado;
-        tipoAlgoritmo.textContent = `Algoritmo: ${algoritmoElegido}`;
-        menuAlgoritmo.style.display = "none";
-    });
-});
-
-menuAnadirP.querySelector("form button").addEventListener("click", (e) => {
-    e.preventDefault(); 
-
-    const nombre = document.getElementById("nombre").value.trim();
-    const tamano = parseInt(document.getElementById("tamano").value);
-    
-    if (!nombre) {
-        alert("El nombre del proceso no puede estar vacío");
-        return;
-    }
-    
-    if (isNaN(tamano) || tamano <= 0) {
-        alert("El tamaño debe ser un número mayor a 0");
-        return;
-    }
-    
-    if (tamano > TAMANO_PARTICION_KiB) {
-        alert(`El tamaño no puede ser mayor a ${TAMANO_PARTICION_KiB} KiB (tamaño de partición)`);
-        return;
-    }
-
-    const proceso = { nombre, tamano };
-    if (asignarProceso(proceso)) {
-        procesos.push(`${nombre} (${tamano} KiB)`);
-        actualizarListaProcesos();
-        actualizarVisualizacionMemoria();
-        mostrarInformacionMemoria();
-        alert(`Proceso "${nombre}" añadido exitosamente`); 
-    } else {
-        alert(`No se pudo añadir el proceso "${nombre}"`);
-    }
-
-    document.getElementById("nombre").value = "";
-    document.getElementById("tamano").value = "";
-    menuAnadirP.style.display = "none";
-});
-
-document.querySelector("#menu-eliminar-proceso form button").addEventListener("click", (e) => {
+  btn.addEventListener("click", (e) => {
     e.preventDefault();
-    const select = document.getElementById("proceso-eliminar");
-    const nombreProceso = select.value;
-    
-    if (!nombreProceso) {
-        alert("No hay procesos para eliminar");
-        return;
-    }
-    
-    if (eliminarProceso(nombreProceso)) {
-        alert(`Proceso ${nombreProceso} eliminado`);
-        mostrarInformacionMemoria();
+
+    const map = {
+      'btn-particion-fija': 'Estática de tamaño fijo',
+      'btn-particion-variable': 'Estática de tamaño variable',
+      'btn-particion-dinamica-sin': 'Dinámica (sin compactación)',
+      'btn-particion-dinamica-con': 'Dinámica (con compactación)'
+    };
+
+    const opcion = map[btn.id] || btn.textContent.trim();
+    particionElegida = opcion;
+    tipoParticion.textContent = `Partición: ${particionElegida}`;
+
+    if (btn.id === 'btn-particion-fija') {
+      algoritmoElegido = 'Primer ajuste';
+      tipoAlgoritmo.textContent = `Algoritmo: ${algoritmoElegido}`;
+      if (typeof inicializarParticionesFijas === 'function') {
+        inicializarParticionesFijas();
+      } else {
+        console.error('inicializarParticionesFijas no está definida');
+      }
+    } else if (btn.id === 'btn-particion-dinamica-sin') {
+      if (typeof inicializarDinamicaSinCompactacion === 'function') {
+        inicializarDinamicaSinCompactacion();
+      } else {
+        console.error('inicializarDinamicaSinCompactacion no está definida');
+      }
+    } else if (btn.id === 'btn-particion-variable') {
+      algoritmoElegido = null;
+      tipoAlgoritmo.textContent = `Algoritmo: —`;
+      alert("Particiones variables en desarrollo");
+    } else if (btn.id === 'btn-particion-dinamica-con') {
+      algoritmoElegido = null;
+      tipoAlgoritmo.textContent = `Algoritmo: —`;
+      alert("Dinámica con compactación en desarrollo");
     } else {
-        alert(`No se encontró el proceso ${nombreProceso}`);
+      alert("Opción no reconocida.");
+      return;
     }
-    
-    menuEliminarP.style.display = "none";
+
+    refrescarVista();
+    menuParticion.style.display = "none";
+  });
 });
 
+// Seleccionar algoritmo
+document.querySelectorAll("#menu-algoritmo ul button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    algoritmoElegido = btn.textContent;
+    tipoAlgoritmo.textContent = `Algoritmo: ${algoritmoElegido}`;
+    menuAlgoritmo.style.display = "none";
+    refrescarVista();
+
+    if (particionElegida === 'Dinámica (sin compactación)') {
+      precargarProgramasDinamicos();
+    }
+  });
+});
+
+// Agregar proceso
+document.getElementById("btn-agregar-proceso").addEventListener("click", e => {
+  e.preventDefault();
+  const nombre = document.getElementById("nombre-proceso").value.trim();
+  const tamano = parseInt(document.getElementById("tamano-proceso").value);
+
+  if (!nombre) return alert("El nombre del proceso no puede estar vacío");
+  if (isNaN(tamano) || tamano <= 0) return alert("El tamaño debe ser mayor que 0");
+  
+  // Para particiones fijas, validar tamaño
+  if (particionElegida === 'Estática de tamaño fijo' && tamano > TAMANO_PARTICION_KiB) {
+    return alert(`El tamaño no puede ser mayor a ${TAMANO_PARTICION_KiB} KiB`);
+  }
+
+  const proceso = { nombre, tamano };
+  if (asignarProceso(proceso)) {
+    alert(`Proceso "${nombre}" añadido exitosamente`);
+  } else {
+    alert(`No se pudo añadir el proceso "${nombre}"`);
+  }
+
+  document.getElementById("nombre-proceso").value = "";
+  document.getElementById("tamano-proceso").value = "";
+  menuAnadirP.style.display = "none";
+});
+
+// Eliminar proceso
+document.getElementById("btn-eliminar-proceso-form").addEventListener("click", e => {
+  e.preventDefault();
+  const nombreProceso = document.getElementById("proceso-eliminar").value;
+  if (!nombreProceso) return alert("No hay procesos para eliminar");
+
+  if (eliminarProceso(nombreProceso)) {
+    alert(`Proceso ${nombreProceso} eliminado`);
+    refrescarVista();
+  } else {
+    alert(`No se encontró el proceso ${nombreProceso}`);
+  }
+  menuEliminarP.style.display = "none";
+});
+
+// Reiniciar simulación
 reiniciar.addEventListener("click", () => {
-    particionElegida = null;
-    algoritmoElegido = null;
-    procesos = [];
-    memoria = [];
+  particionElegida = null;
+  algoritmoElegido = null;
+  procesos = [];
+  memoria = [];
 
-    tipoParticion.textContent = "Partición: —";
-    tipoAlgoritmo.textContent = "Algoritmo: —";
-    listaProcesos.textContent = "Procesos: —";
+  tipoParticion.textContent = "Partición: —";
+  tipoAlgoritmo.textContent = "Algoritmo: —";
+  listaProcesos.textContent = "Procesos: —";
 
-    const memoriaBox = document.querySelector('.memoria-box');
-    const etiquetasMemoria = document.querySelector('.etiquetas-memoria');
-    memoriaBox.innerHTML = '';
-    etiquetasMemoria.innerHTML = '';
-    
-    mostrarInformacionMemoria();
+  document.querySelector('.memoria-box').innerHTML = '';
+  document.querySelector('.etiquetas-memoria').innerHTML = '';
+  mostrarInformacionMemoria();
 });
 
+// Inicializar info al cargar
 document.addEventListener('DOMContentLoaded', mostrarInformacionMemoria);
