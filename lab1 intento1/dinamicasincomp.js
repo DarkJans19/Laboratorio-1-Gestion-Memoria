@@ -1,3 +1,9 @@
+function actualizarMemoria(){
+  actualizarVisualizacionMemoria();
+  mostrarInformacionMemoria();
+  actualizarListaProcesos();
+}
+
 function inicializarDinamicaSinCompactacion() {
   const tamSO = 1024; 
   memoria = [
@@ -6,9 +12,7 @@ function inicializarDinamicaSinCompactacion() {
   ];
   procesos = [];
 
-  actualizarVisualizacionMemoria();
-  mostrarInformacionMemoria();
-  actualizarListaProcesos();
+  actualizarMemoria();
 }
 
 
@@ -47,7 +51,7 @@ function asignarProcesoDinamicaSinCompactacion(proceso, algoritmo) {
   else if (algoritmo === 'Peor ajuste') indice = peorAjusteDinamico(proceso.tamano);
 
   if (indice === -1) {
-    alert(`❌ No hay hueco disponible para ${proceso.nombre} (${proceso.tamano} KiB)`);
+    alert(`No hay hueco disponible para ${proceso.nombre} (${proceso.tamano} KiB)`);
     return false;
   }
 
@@ -59,7 +63,7 @@ function asignarProcesoDinamicaSinCompactacion(proceso, algoritmo) {
     bloque.ocupado = true;
     bloque.proceso = { nombre: proceso.nombre, tamano: proceso.tamano };
   }
- 
+
   else {
     const nuevoBloqueLibre = {
       tipo: 'libre',
@@ -79,9 +83,7 @@ function asignarProcesoDinamicaSinCompactacion(proceso, algoritmo) {
   const nombreCompleto = `${proceso.nombre} (${proceso.tamano} KiB)`;
   if (!procesos.includes(nombreCompleto)) procesos.push(nombreCompleto);
 
-  actualizarVisualizacionMemoria();
-  mostrarInformacionMemoria();
-  actualizarListaProcesos();
+  actualizarMemoria();
 
   return true;
 }
@@ -105,9 +107,7 @@ function eliminarProcesoDinamicaSinCompactacion(nombreProceso) {
   if (!eliminado) return false;
 
 
-  actualizarVisualizacionMemoria();
-  mostrarInformacionMemoria();
-  actualizarListaProcesos();
+  actualizarMemoria();
 
   return true;
 }

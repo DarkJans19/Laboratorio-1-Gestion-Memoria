@@ -4,11 +4,11 @@ const TAMANO_PARTICION_MiB = 1;
 const TAMANO_PARTICION_KiB = TAMANO_PARTICION_MiB * 1024;
 
 const PROGRAMAS_PREDEFINIDOS = [
-  { nombre: 'Notepad', tamano: 225 },
-  { nombre: 'Word', tamano: 287 },
-  { nombre: 'Excel', tamano: 309 },
-  { nombre: 'AutoCAD', tamano: 436 },
-  { nombre: 'Calculadora', tamano: 209 }
+    { nombre: 'Notepad', tamano: 225 },
+    { nombre: 'Word', tamano: 287 },
+    { nombre: 'Excel', tamano: 309 },
+    { nombre: 'AutoCAD', tamano: 436 },
+    { nombre: 'Calculadora', tamano: 209 }
 ];
 
 // VARIABLES GLOBALES
@@ -30,6 +30,14 @@ const menuEliminarP = document.getElementById("menu-eliminar-proceso");
 const reiniciar = document.getElementById("btn-reiniciar");
 
 // FUNCIONES DE VISUALIZACIÓN
+
+// FUNCIÓN COMÚN PARA ACTUALIZAR VISTA
+function refrescarVista(){
+    actualizarVisualizacionMemoria();
+    mostrarInformacionMemoria();
+    actualizarListaProcesos();
+}
+
 // Función para inicializar el array de memoria con el SO en la posición 0
 function inicializarMemoriaConSO() {
     memoria = [{
@@ -39,17 +47,6 @@ function inicializarMemoriaConSO() {
         ocupado: true,
         proceso: { nombre: 'SO', tamano: 1024 }
     }];
-}
-
-// Función para inicializar el Sistema Operativo esto quizas se podria quitar
-function inicializarSistemaOperativo() {
-    memoria.push({
-        tipo: 'SO',
-        nombre: 'Sistema Operativo',
-        tamano: 1024,
-        ocupado: true,
-        proceso: { nombre: 'SO', tamano: 1024 }
-    });
 }
 
 // Particiones estáticas fijas
@@ -72,7 +69,7 @@ function inicializarParticionesFijas() {
 function particionarEspaciosVariables() {
     const tamaño_inicial = 2 * 1024; // 2 MiB
     const razon = 1 / 2;
-    const niveles = 3; // hasta 0.5 MiB
+    const niveles = 3;
     const particionesPorNivel = 4;
 
     let tamaños = [];
@@ -112,22 +109,20 @@ function inicializarParticionesFijasVariables() {
         };
     });
 
-    // Buscar la primera partición válida para el SO
-    let indiceParticionSO = memoria.findIndex(bloque => 
-        !bloque.ocupado && bloque.tipo === 'particion' && bloque.tamano >= 1024
-    );
+    const procesoSO = { nombre: 'SO', tamano: 1024 };
 
-    if (indiceParticionSO !== -1) {
-        // Asignar el SO a la partición encontrada
-        const particionSO = memoria[indiceParticionSO];
+    const particionSO = aplicarAlgoritmoSeleccion(memoria, procesoSO.tamano, 'Primer ajuste');
+
+    if (particionSO) {
         particionSO.ocupado = true;
-        particionSO.proceso = { nombre: 'SO', tamano: 1024 };
-        particionSO.fragmentacionInterna = particionSO.tamano - 1024;
+        particionSO.proceso = procesoSO;
+        particionSO.fragmentacionInterna = particionSO.tamano - procesoSO.tamano;
 
-        // Mover la partición del SO a la primera posición
-        if (indiceParticionSO !== 0) {
-            const particionSOData = memoria.splice(indiceParticionSO, 1)[0];
-            memoria.unshift(particionSOData);
+        // Mover el SO a la primera posición (solo para mantener orden visual)
+        const indiceSO = memoria.indexOf(particionSO);
+        if (indiceSO !== 0) {
+            const soData = memoria.splice(indiceSO, 1)[0];
+            memoria.unshift(soData);
         }
     } else {
         alert("No hay partición disponible para alojar el Sistema Operativo.");
@@ -214,7 +209,7 @@ function asignarProcesoEstaticaFijaVariable(proceso, algoritmo) {
         return false;
     }
 
-    // 👉 Aquí aplicamos el algoritmo seleccionado
+    // Aquí aplicamos el algoritmo seleccionado
     const particionSeleccionada = aplicarAlgoritmoSeleccion(memoria, proceso.tamano, algoritmo);
 
     if (!particionSeleccionada) {
@@ -235,6 +230,29 @@ function asignarProcesoEstaticaFijaVariable(proceso, algoritmo) {
 
 
 function eliminarProcesoEstaticaFija(nombreProceso) {
+    let procesoEliminado = false;
+    
+    memoria.forEach(bloque => {
+        if (bloque.ocupado && bloque.proceso && bloque.proceso.nombre === nombreProceso) {
+            bloque.ocupado = false;
+            bloque.proceso = null;
+            bloque.fragmentacionInterna = 0;
+            procesoEliminado = true;
+
+            procesos = procesos.filter(p => !p.startsWith(`${nombreProceso} (`));
+        }
+    });
+    
+    if (procesoEliminado) {
+        actualizarVisualizacionMemoria();
+        actualizarListaProcesos();
+        return true;
+    }
+    
+    return false;
+}
+
+function eliminarProcesoEstaticaVariable(nombreProceso) {
     let procesoEliminado = false;
     
     memoria.forEach(bloque => {
@@ -336,12 +354,6 @@ function mostrarInformacionMemoria() {
     infoEleccion.innerHTML = html;
 }
 
-function refrescarVista() {
-  actualizarVisualizacionMemoria();
-  actualizarListaProcesos();
-  mostrarInformacionMemoria();
-}
-
 // FUNCIONES DE ASIGNACIÓN
 function asignarProceso(proceso) {
     if (!particionElegida || !algoritmoElegido) {
@@ -362,6 +374,8 @@ function asignarProceso(proceso) {
         case 'Dinámica (sin compactación)':
             // revisar
             return asignarProcesoDinamicaSinCompactacion(proceso, algoritmoElegido);
+        case 'Dinámica (con compactación)':
+            return asignarProcesoDinamicaConCompactacion(proceso, algoritmoElegido);
         default:
         alert("Funcionalidad en desarrollo");
         return false;
@@ -380,20 +394,17 @@ function eliminarProceso(nombreProceso) {
     
     switch(particionElegida) {
         case 'Estática de tamaño fijo':
-            resultado = eliminarProcesoEstaticaFija(nombreProceso);
-            break;
-            
+            return eliminarProcesoEstaticaFija(nombreProceso);
         case 'Estática de tamaño variable':
-            alert("Funcionalidad para particiones variables en desarrollo");
-            return false;
+            return  eliminarProcesoEstaticaVariable(nombreProceso);
         case 'Dinámica (sin compactación)':
             return eliminarProcesoDinamicaSinCompactacion(nombreProceso);
+        case 'Dinámica (con compactación)':
+            return eliminarProcesoDinamicaConCompactacion(nombreProceso);
         default:
             alert("Funcionalidad para este tipo de partición en desarrollo");
             return false;
     }
-    
-    return resultado;
 }
 
 // Algoritmos
@@ -435,12 +446,10 @@ function aplicarAlgoritmoSeleccion(memoria, tamanoProceso, algoritmo) {
             });
 
         default:
-            console.warn("Algoritmo desconocido:", algoritmo);
+            alert("Algoritmo desconocido:", algoritmo);
             return null;
     }
 }
-
-
 
 function mostrarInformacionMemoria() {
     const infoEleccion = document.querySelector('.info-eleccion');
@@ -544,19 +553,30 @@ btn.addEventListener("click", (e) => {
         } else {
             console.error('inicializarParticionesFijas no está definida');
         }
-    } else if (btn.id === 'btn-particion-dinamica-sin') {
+    } 
+    else if (btn.id === 'btn-particion-dinamica-sin') {
         if (typeof inicializarDinamicaSinCompactacion === 'function') {
         inicializarDinamicaSinCompactacion();
         } else {
         console.error('inicializarDinamicaSinCompactacion no está definida');
         }
-    } else if (btn.id === 'btn-particion-variable') {
+    } 
+    else if (btn.id === 'btn-particion-variable') {
         inicializarParticionesFijasVariables();
-    } else if (btn.id === 'btn-particion-dinamica-con') {
-        algoritmoElegido = null;
-        tipoAlgoritmo.textContent = `Algoritmo: —`;
-        alert("Dinámica con compactación en desarrollo");
-    } else {
+    } 
+    
+    else if (btn.id === 'btn-particion-dinamica-con') {
+        console.log("Intentando inicializar Dinámica con Compactación");
+        console.log("¿Función disponible?", typeof inicializarDinamicaConCompactacion);
+        if (typeof inicializarDinamicaConCompactacion === 'function') {
+            inicializarDinamicaConCompactacion();
+            console.log("Inicialización exitosa");
+        } else {
+            console.error('inicializarDinamicaConCompactacion no está definida');
+        }
+    }
+
+    else {
         alert("Opción no reconocida.");
         return;
     }
@@ -584,6 +604,11 @@ document.querySelectorAll("#menu-algoritmo ul button").forEach(btn => {
 
         // Precargar si es dinámica sin compactación
         if (particionElegida === 'Dinámica (sin compactación)') {
+            precargarProgramasDinamicos();
+        }
+
+        // Precargar si es dinámica con compactación
+        if (particionElegida === 'Dinámica (con compactación)') {
             precargarProgramasDinamicos();
         }
     });
