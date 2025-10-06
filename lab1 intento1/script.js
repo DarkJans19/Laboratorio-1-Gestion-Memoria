@@ -209,37 +209,37 @@ function asignarProcesoEstaticaFija(proceso, algoritmo) {
 }
 
 function asignarProcesoEstaticaFijaVariable(proceso, algoritmo) {
-    // VALIDACIONES MEJORADAS
-    if (proceso.tamano <= 0) {
-        alert(`ERROR: El tamaño debe ser mayor a 0 KiB`);
-        return false;
-    }
-    
-    if (proceso.tamano > TAMANO_PARTICION_KiB) {
-        alert(`ERROR: El proceso ${proceso.nombre} requiere ${proceso.tamano} KiB pero las particiones son de ${TAMANO_PARTICION_KiB} KiB`);
+    const LIMITE_TAMANO_PARTICION_KiB = 2048;
+
+    if (proceso.tamano > LIMITE_TAMANO_PARTICION_KiB) {
+        alert(`ERROR: El tamaño del proceso no puede exceder ${LIMITE_TAMANO_PARTICION_KiB} KiB.`);
         return false;
     }
 
-    let particionSeleccionada = null;
-    
-    for (let i = 0; i < memoria.length; i++) {
-        const bloque = memoria[i];
-        if (bloque.tipo === 'particion' && !bloque.ocupado) {
-            particionSeleccionada = bloque;
-            break; 
-        }
-    }
-    
-    if (!particionSeleccionada) {
-        alert("No hay particiones libres disponibles");
+    if (proceso.tamano <= 0) {
+        alert(`ERROR: El tamaño debe ser mayor a 0 KiB.`);
         return false;
     }
-    
+
+    // 👉 Aquí aplicamos el algoritmo seleccionado
+    const particionSeleccionada = aplicarAlgoritmoSeleccion(memoria, proceso.tamano, algoritmo);
+
+    if (!particionSeleccionada) {
+        alert("No hay particiones libres disponibles que cumplan con los requisitos.");
+        return false;
+    }
+
+    // --- Asignación real ---
     particionSeleccionada.ocupado = true;
     particionSeleccionada.proceso = proceso;
-    particionSeleccionada.fragmentacionInterna = TAMANO_PARTICION_KiB - proceso.tamano;
+    particionSeleccionada.fragmentacionInterna = particionSeleccionada.tamano - proceso.tamano;
+
+    actualizarVisualizacionMemoria();
+    mostrarInformacionMemoria();
+
     return true;
 }
+
 
 function eliminarProcesoEstaticaFija(nombreProceso) {
     let procesoEliminado = false;
@@ -294,11 +294,6 @@ function actualizarVisualizacionMemoria() {
         etiqueta.className = 'etiqueta-bloque';
         
         let textoEtiqueta = '';
-        /*
-        if (bloque.tipo === 'SO') {
-            textoEtiqueta = 'SO\n1024 KiB';
-        } 
-            */
         
         textoEtiqueta = `${bloque.tamano} KiB`;
         
@@ -327,8 +322,6 @@ function asignarProceso(proceso) {
             
         case 'Estática de tamaño variable':
             resultado = asignarProcesoEstaticaFijaVariable(proceso, algoritmoElegido);
-            // alert("Funcionalidad para particiones variables en desarrollo");
-            // return false;
             break;
         case 'Dinámica (sin compactación)':
         case 'Dinámica (con compactación)':
@@ -363,6 +356,52 @@ function eliminarProceso(nombreProceso) {
     
     return resultado;
 }
+
+// Algoritmos
+
+function aplicarAlgoritmoSeleccion(memoria, tamanoProceso, algoritmo) {
+    const particionesLibres = memoria.filter(bloque =>
+        bloque.tipo === 'particion' &&
+        !bloque.ocupado &&
+        bloque.tamano >= tamanoProceso
+    );
+
+    if (particionesLibres.length === 0) return null;
+
+    switch (algoritmo) {
+        case 'Primer ajuste':
+            for (const bloque of memoria) {
+                if (
+                    bloque.tipo === 'particion' &&
+                    !bloque.ocupado &&
+                    bloque.tamano >= tamanoProceso
+                ) {
+                    return bloque;
+                }
+            }
+            return null;
+
+        case 'Mejor ajuste':
+            return particionesLibres.reduce((mejor, actual) => {
+                const sobranteMejor = mejor.tamano - tamanoProceso;
+                const sobranteActual = actual.tamano - tamanoProceso;
+                return sobranteActual < sobranteMejor ? actual : mejor;
+            });
+
+        case 'Peor ajuste':
+            return particionesLibres.reduce((peor, actual) => {
+                const sobrantePeor = peor.tamano - tamanoProceso;
+                const sobranteActual = actual.tamano - tamanoProceso;
+                return sobranteActual > sobrantePeor ? actual : peor;
+            });
+
+        default:
+            console.warn("Algoritmo desconocido:", algoritmo);
+            return null;
+    }
+}
+
+
 
 function mostrarInformacionMemoria() {
     const infoEleccion = document.querySelector('.info-eleccion');
@@ -469,9 +508,6 @@ document.querySelectorAll("#menu-particion ul button").forEach(btn => {
             inicializarParticionesFijas();
         } 
         else if (particionElegida === 'Estática de tamaño variable') {
-            algoritmoElegido = 'Primer ajuste';
-            tipoAlgoritmo.textContent = "Algoritmo: —";
-            tipoAlgoritmo.textContent = `Algoritmo: ${algoritmoElegido}`;
             inicializarParticionesFijasVariables();
         }
         
@@ -486,7 +522,7 @@ document.querySelectorAll("#menu-algoritmo ul button").forEach(btn => {
         const algoritmoSeleccionado = btn.textContent;
         
         if (particionElegida === 'Estática de tamaño fijo' && algoritmoSeleccionado !== 'Primer ajuste') {
-            alert(`ERROR: En partición estática fija solo se puede usar "Primer ajuste".\nEl algoritmo ya está establecido automáticamente.`);
+            alert(`ERROR: En partición estática fija solo se puede usar "Primer ajuste".`);
             return;
         }
         
@@ -509,11 +545,6 @@ menuAnadirP.querySelector("form button").addEventListener("click", (e) => {
     
     if (isNaN(tamano) || tamano <= 0) {
         alert("El tamaño debe ser un número mayor a 0");
-        return;
-    }
-    
-    if (tamano > TAMANO_PARTICION_KiB) {
-        alert(`El tamaño no puede ser mayor a ${TAMANO_PARTICION_KiB} KiB (tamaño de partición)`);
         return;
     }
 
