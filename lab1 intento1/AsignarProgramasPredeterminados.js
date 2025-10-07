@@ -4,7 +4,6 @@ function asignarProgramasPredeterminados() {
     PROGRAMAS_PREDEFINIDOS.forEach(programa => {
         if (programasAsignados < 5) {
             const proceso = { nombre: programa.nombre, tamano: programa.tamano };
-
             const particionesLibres = memoria.filter(bloque => 
                 bloque.tipo === 'particion' && !bloque.ocupado
             );
@@ -14,13 +13,11 @@ function asignarProgramasPredeterminados() {
                 particion.ocupado = true;
                 particion.proceso = proceso;
                 particion.fragmentacionInterna = TAMANO_PARTICION_KiB - proceso.tamano;
-                
                 procesos.push(`${programa.nombre} (${programa.tamano} KiB)`);
                 programasAsignados++;
             }
         }
     });
-    
     actualizarVisualizacionMemoria();
     actualizarListaProcesos();
 }

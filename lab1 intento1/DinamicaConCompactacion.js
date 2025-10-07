@@ -1,72 +1,69 @@
 function inicializarDinamicaConCompactacion() {
-    const tamSO = 1024; 
+    const tamSO = 1024; // Tamaño reservado para el sistema operativo (1 MiB)
+
     memoria = [
         { tipo: 'SO', inicio: 0, tamano: tamSO, ocupado: true, proceso: { nombre: 'SO', tamano: tamSO } },
         { tipo: 'libre', inicio: tamSO, tamano: MEMORIA_TOTAL_KiB - tamSO, ocupado: false, proceso: null }
     ];
-    procesos = [];
-
-    refrescarVista();
+    
+    procesos = []; // Lista de procesos actualmente cargados
+    refrescarVista(); // Actualiza la representación gráfica de la memoria
 }
 
+// Cargar los programas predefinidos usando el algoritmo elegido
 function precargarProgramasDinamicos() {
-    if (!algoritmoElegido) {
-        console.log("No se puede precargar sin algoritmo seleccionado");
-        return;
-    }
-
-    console.log("Precargando programas con algoritmo:", algoritmoElegido);
-
     let exitosos = 0;
     let fallidos = 0;
 
     PROGRAMAS_PREDEFINIDOS.forEach(p => {
         const resultado = asignarProcesoDinamicaConCompactacion(
-        { nombre: p.nombre, tamano: p.tamano },
-        algoritmoElegido
+            { nombre: p.nombre, tamano: p.tamano },
+            algoritmoElegido
         );
         
-        if (resultado) {
-        exitosos++;
-        } else {
-        fallidos++;
-        }
+        if (resultado) exitosos++;
+        else fallidos++;
     });
 }
 
+// Asigna un proceso a la memoria dinámica usando un algoritmo específico
 function asignarProcesoDinamicaConCompactacion(proceso, algoritmo) {
     if (!algoritmo) { alert("Selecciona un algoritmo antes de asignar procesos"); return false; }
     if (!proceso.tamano || proceso.tamano <= 0) { alert("El tamaño del proceso debe ser mayor a 0"); return false; }
 
     let indice = -1;
+
+    // Según el algoritmo elegido, se busca el hueco donde colocar el proceso
     if (algoritmo === 'Primer ajuste') indice = primerAjusteDinamico(proceso.tamano);
     else if (algoritmo === 'Mejor ajuste') indice = mejorAjusteDinamico(proceso.tamano);
     else if (algoritmo === 'Peor ajuste') indice = peorAjusteDinamico(proceso.tamano);
 
-    // Si no hay espacio, intentamos compactar
+    // Si no se encuentra espacio, se intenta compactar la memoria
     if (indice === -1) {
-        console.log(`No hay hueco disponible para ${proceso.nombre} (${proceso.tamano} KiB). Intentando compactar...`);
         compactarMemoria();
 
-        // Reintentar búsqueda de hueco después de compactar
+        // Se vuelve a intentar asignar después de compactar
         if (algoritmo === 'Primer ajuste') indice = primerAjusteDinamico(proceso.tamano);
         else if (algoritmo === 'Mejor ajuste') indice = mejorAjusteDinamico(proceso.tamano);
         else if (algoritmo === 'Peor ajuste') indice = peorAjusteDinamico(proceso.tamano);
 
         if (indice === -1) {
-            alert(`Incluso después de compactar, no hay espacio disponible para ${proceso.nombre}`);
+            alert(`No hay espacio disponible para ${proceso.nombre}`);
             return false;
         }
     }
 
+    // Se actualiza el bloque de memoria encontrado
     const bloque = memoria[indice];
     const espacioRestante = bloque.tamano - proceso.tamano;
 
     if (espacioRestante === 0) {
+        // El proceso ocupa toda la partición
         bloque.tipo = 'proceso';
         bloque.ocupado = true;
         bloque.proceso = { nombre: proceso.nombre, tamano: proceso.tamano };
     } else {
+        // Se divide el bloque en una parte ocupada y la otra libre
         const nuevoBloqueLibre = {
             tipo: 'libre',
             inicio: bloque.inicio + proceso.tamano,
@@ -89,9 +86,11 @@ function asignarProcesoDinamicaConCompactacion(proceso, algoritmo) {
     return true;
 }
 
+// Elimina un proceso y compacta la memoria
 function eliminarProcesoDinamicaConCompactacion(nombreProceso) {
     let eliminado = false;
 
+    // Busca el proceso en memoria
     for (let i = 0; i < memoria.length; i++) {
         const bloque = memoria[i];
         if (bloque.ocupado && bloque.proceso?.nombre === nombreProceso) {
@@ -106,18 +105,17 @@ function eliminarProcesoDinamicaConCompactacion(nombreProceso) {
 
     if (!eliminado) return false;
 
+    // Una vez eliminado se compacta la memoria 
     compactarMemoria();
-    
     return true;
 }
 
+// Mueve todos los procesos hacia el inicio de la memoria
 function compactarMemoria() {
-    console.log("Compactando memoria...");
-
     let nuevaMemoria = [];
     let inicioActual = 0;
 
-    // Mover todos los bloques ocupados al inicio
+    // Primero se copian los bloques ocupados al principio
     memoria.forEach(bloque => {
         if (bloque.ocupado) {
             nuevaMemoria.push({
@@ -131,7 +129,7 @@ function compactarMemoria() {
         }
     });
 
-    // Calcular espacio libre restante
+    // Se calcula el espacio libre restante
     const espacioLibre = MEMORIA_TOTAL_KiB - inicioActual;
     if (espacioLibre > 0) {
         nuevaMemoria.push({
@@ -143,12 +141,12 @@ function compactarMemoria() {
         });
     }
 
-    // 3. Reemplazar la memoria anterior
+    // Se reemplaza la memoria anterior con la compactada
     memoria = nuevaMemoria;
-
     refrescarVista();
 }
 
+// Recalcula los valores de inicio de cada bloque en memoria
 function recalcularInicios() {
     let inicioActual = 0;
     memoria.forEach(b => {
