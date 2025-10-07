@@ -1,4 +1,3 @@
-// QUITA los export
 const tipoParticion = document.getElementById("tipo-particion");
 const tipoAlgoritmo = document.getElementById("tipo-algoritmo");
 const listaProcesos = document.getElementById("lista-procesos");

@@ -84,11 +84,6 @@ function asignarProcesoDinamicaSinCompactacion(proceso, algoritmo) {
   return true;
 }
 
-/**
- * Fusiona bloques de memoria adyacentes que estén libres
- * @param {number} indice - Índice del primer bloque a fusionar
- * @returns {boolean} - true si se pudo fusionar, false en caso contrario
- */
 function fusionarBloques(indice) {
   let fusionable = false;
   

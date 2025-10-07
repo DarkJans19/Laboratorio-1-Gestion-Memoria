@@ -1,5 +1,5 @@
 function particionarEspaciosVariables() {
-    const tamaño_inicial = 2 * 1024; // 2 MiB
+    const tamaño_inicial = 2 * 1024; 
     const razon = 1 / 2;
     const niveles = 3;
     const particionesPorNivel = 4;
@@ -13,7 +13,6 @@ function particionarEspaciosVariables() {
         }
     }
 
-    // Repetimos el último nivel para completar las 16 particiones
     const ultimoTamano = tamaño_inicial * (razon ** (niveles - 1));
     for (let j = 0; j < particionesPorNivel; j++) {
         tamaños.push(ultimoTamano);
@@ -22,7 +21,6 @@ function particionarEspaciosVariables() {
     return tamaños.reverse();
 }
 
-// Particiones estáticas variables
 function inicializarParticionesFijasVariables() {
     memoria = []; // Reiniciar la memoria
 
@@ -48,8 +46,7 @@ function inicializarParticionesFijasVariables() {
         particionSO.ocupado = true;
         particionSO.proceso = procesoSO;
         particionSO.fragmentacionInterna = particionSO.tamano - procesoSO.tamano;
-
-        // Mover el SO a la primera posición (solo para mantener orden visual)
+ 
         const indiceSO = memoria.indexOf(particionSO);
         if (indiceSO !== 0) {
             const soData = memoria.splice(indiceSO, 1)[0];
@@ -83,7 +80,6 @@ function asignarProcesoEstaticaFijaVariable(proceso, algoritmo) {
         return false;
     }
 
-    // --- Asignación real ---
     particionSeleccionada.ocupado = true;
     particionSeleccionada.proceso = proceso;
     particionSeleccionada.fragmentacionInterna = particionSeleccionada.tamano - proceso.tamano;

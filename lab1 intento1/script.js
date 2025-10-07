@@ -1,6 +1,4 @@
-// FUNCIONES DE VISUALIZACIÓN
-
-// FUNCIÓN COMÚN PARA ACTUALIZAR VISTA
+// FUNCIÓN  PARA ACTUALIZAR VISTA
 function refrescarVista(){
     actualizarVisualizacionMemoria();
     mostrarInformacionMemoria();
@@ -93,8 +91,7 @@ function actualizarVisualizacionMemoria() {
         
         div.textContent = contenido;
         memoriaBox.appendChild(div);
-        
-        // Crear etiqueta al lado izquierdo - SIEMPRE MOSTRAR TAMAÑO FIJO
+
         const etiqueta = document.createElement('div');
         etiqueta.className = 'etiqueta-bloque';
         
@@ -135,19 +132,20 @@ function asignarProceso(proceso) {
     
     switch(particionElegida) {
         case 'Estática de tamaño fijo':
-            resultado = asignarProcesoEstaticaFija(proceso);
+            resultado = asignarProcesoEstaticaFija(proceso, algoritmoElegido);
             break;
             
         case 'Estática de tamaño variable':
-            resultado = asignarProcesoEstaticaFijaVariable(proceso, algoritmoElegido);
+            resultado = asignarProcesoEstaticaVariable(proceso, algoritmoElegido);
             break;
         case 'Dinámica (sin compactación)':
-            // revisar
-            return asignarProcesoDinamicaSinCompactacion(proceso, algoritmoElegido);
+            resultado = asignarProcesoDinamicaSinCompactacion(proceso, algoritmoElegido);
+            break;
         case 'Dinámica (con compactación)':
-            return asignarProcesoDinamicaConCompactacion(proceso, algoritmoElegido);
+            resultado = asignarProcesoDinamicaConCompactacion(proceso, algoritmoElegido);
+            break;
         default:
-        alert("Funcionalidad en desarrollo");
+        alert("Error");
         return false;
     }
     
@@ -270,7 +268,8 @@ document.getElementById("btn-eliminar-proceso").addEventListener("click", () => 
     menuEliminarP.style.display = "flex";
 });
 
-// EVENTOS SECUNDARIOS
+// Eventos secundarios
+
 document.querySelectorAll('[id^="cerrar-"]').forEach(btn => {
     btn.addEventListener("click", () => {
         btn.closest(".ventana-oculta").style.display = "none";
@@ -278,6 +277,7 @@ document.querySelectorAll('[id^="cerrar-"]').forEach(btn => {
 });
 
 // Seleccionar partición
+
 document.querySelectorAll("#menu-particion ul button").forEach(btn => {
 btn.addEventListener("click", (e) => {
     e.preventDefault();
@@ -337,14 +337,6 @@ btn.addEventListener("click", (e) => {
 document.querySelectorAll("#menu-algoritmo ul button").forEach(btn => {
     btn.addEventListener("click", () => {
         const algoritmoSeleccionado = btn.textContent;
-
-        /*
-        // Validación para partición estática de tamaño fijo
-        if (particionElegida === 'Estática de tamaño fijo' && algoritmoSeleccionado !== 'Primer ajuste') {
-            alert(`ERROR: En partición estática fija solo se puede usar "Primer ajuste".`);
-            return; // Cancelar el resto si no es válido
-        }
-        */
         
         // Guardar algoritmo y actualizar UI
         algoritmoElegido = algoritmoSeleccionado;

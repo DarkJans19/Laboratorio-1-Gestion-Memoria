@@ -1,4 +1,3 @@
-// Particiones estáticas fijas
 function inicializarParticionesFijas() {
     inicializarMemoriaConSO(); // Inicializar memoria con el SO en la posición 0
 
@@ -16,40 +15,37 @@ function inicializarParticionesFijas() {
 }
 
 function asignarProcesoEstaticaFija(proceso, algoritmo) {
-  if (proceso.tamano <= 0) {
-    alert(`ERROR: El tamaño debe ser mayor a 0 KiB`);
-    return false;
-  }
+    if (proceso.tamano <= 0) {
+        alert(`ERROR: El tamaño debe ser mayor a 0 KiB`);
+        return false;
+    }
 
-  if (proceso.tamano > TAMANO_PARTICION_KiB) {
-    alert(`ERROR: El proceso ${proceso.nombre} requiere ${proceso.tamano} KiB pero las particiones son de ${TAMANO_PARTICION_KiB} KiB`);
-    return false;
-  }
+    if (proceso.tamano > TAMANO_PARTICION_KiB) {
+        alert(`ERROR: El proceso ${proceso.nombre} requiere ${proceso.tamano} KiB pero las particiones son de ${TAMANO_PARTICION_KiB} KiB`);
+        return false;
+    }
 
-  // Buscar particiones libres
-  const particionesLibres = memoria.filter(bloque => 
-    bloque.tipo === 'particion' && !bloque.ocupado
-  );
+    // Buscar particiones libres
+    const particionesLibres = memoria.filter(bloque => 
+        bloque.tipo === 'particion' && !bloque.ocupado
+    );
 
-  // Usar el algoritmo de primer ajuste
-  const resultado = primerAjuste(particionesLibres, proceso.tamano);
+    if (particionesLibres.length === 0) {
+        alert("No hay particiones libres disponibles");
+        return false;
+    }
 
-  if (!resultado.encontrado) {
-    alert("No hay particiones libres disponibles");
-    return false;
-  }
+    // Para particiones fijas, siempre usar la primera disponible (equivalente a primer ajuste)
+    const particionSeleccionada = particionesLibres[0];
 
-  const particionSeleccionada = resultado.espacio;
+    // Asignar el proceso
+    particionSeleccionada.ocupado = true;
+    particionSeleccionada.proceso = proceso;
+    particionSeleccionada.fragmentacionInterna = TAMANO_PARTICION_KiB - proceso.tamano;
 
-  // Asignar el proceso
-  particionSeleccionada.ocupado = true;
-  particionSeleccionada.proceso = proceso;
-  particionSeleccionada.fragmentacionInterna = TAMANO_PARTICION_KiB - proceso.tamano;
-
-  procesos.push(proceso);
-  actualizarVisualizacionMemoria();
-  actualizarListaProcesos();
-  return true;
+    procesos.push(proceso.nombre);
+    refrescarVista();
+    return true;
 }
 
 function eliminarProcesoEstaticaFija(nombreProceso) {

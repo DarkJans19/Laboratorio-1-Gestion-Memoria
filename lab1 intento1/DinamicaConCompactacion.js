@@ -106,7 +106,6 @@ function eliminarProcesoDinamicaConCompactacion(nombreProceso) {
 
     if (!eliminado) return false;
 
-    // COMPACTACIÓN AUTOMÁTICA AL ELIMINAR
     compactarMemoria();
     
     return true;
@@ -118,7 +117,7 @@ function compactarMemoria() {
     let nuevaMemoria = [];
     let inicioActual = 0;
 
-    // 1. Mover todos los bloques ocupados al inicio
+    // Mover todos los bloques ocupados al inicio
     memoria.forEach(bloque => {
         if (bloque.ocupado) {
             nuevaMemoria.push({
@@ -132,7 +131,7 @@ function compactarMemoria() {
         }
     });
 
-    // 2. Calcular espacio libre restante
+    // Calcular espacio libre restante
     const espacioLibre = MEMORIA_TOTAL_KiB - inicioActual;
     if (espacioLibre > 0) {
         nuevaMemoria.push({
