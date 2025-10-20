@@ -66,7 +66,18 @@ class MemoriaDinamicaSinCompactacion extends Memoria{
         return true;
     }
 
-    fusionarParticion(){
-        // Por implementar
+    fusionarParticion(indice){
+        let fusionable = false;
+        if (indice >= 0 && (indice + 1) < this.particiones.length) {
+            fusionable = !this.particiones[indice].estado && !this.particiones[indice + 1].estado;
+        }
+        
+        if (fusionable) {
+            const tamanoSiguiente = this.particiones[indice + 1].tamañoParticion;
+            this.particiones[indice].tamañoParticion += tamanoSiguiente;
+            this.particiones.splice(indice + 1, 1);
+        }
+        
+        return fusionable;
     }
 }
