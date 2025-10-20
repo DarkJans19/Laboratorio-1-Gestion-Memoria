@@ -10,6 +10,7 @@ class Memoria{
         throw new Error('Debe ser implementado el metodo abstracto');    
     }
 
+    // tabla de control de procesos
     listarParticiones(){
         for(let i = 0; i < this.particiones.length; i++)
             console.log(`[${i}] ${this.particiones[i].toString()}`);
