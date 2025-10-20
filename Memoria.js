@@ -1,9 +1,13 @@
 class Memoria{
-    constructor(tamañoMemoria, particiones, estrategiaParticion, estrategiaAlgoritmo){
+    constructor(tamañoMemoria, estrategiaAlgoritmo){
         this.tamañoMemoria = tamañoMemoria;
-        this.particiones = particiones;
+        this.particiones = [];
         this.estrategiaAlgoritmo = estrategiaAlgoritmo;
-        this.estrategiaParticion = estrategiaParticion;
+    }
+
+    // clase abstracta
+    inicializarMemoria(tamañoMemoria){
+        throw new Error('Debe ser implementado el metodo abstracto');    
     }
 
     listarParticiones(){
