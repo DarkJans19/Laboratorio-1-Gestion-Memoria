@@ -26,6 +26,15 @@ class MemoriaDinamicaSinCompactacion extends Memoria{
         return this.actualizarMemoria(indiceHueco, nuevasParticiones);
     }
 
+    eliminarProceso(PID){
+        const indice = this.particiones.findIndex(p => p.proceso && p.proceso.PID === PID);
+        if (indice === -1) return false;
+        
+        this.particiones[indice].eliminarProceso();
+        this.fusionarParticion();
+        return true;
+    }
+
     calcularLimites(hueco, proceso) {
         const inicioProceso = hueco.direccionInicio;
         const finalProceso = inicioProceso + proceso.tamañoProceso - 1;
@@ -66,18 +75,13 @@ class MemoriaDinamicaSinCompactacion extends Memoria{
         return true;
     }
 
-    fusionarParticion(indice){
-        let fusionable = false;
-        if (indice >= 0 && (indice + 1) < this.particiones.length) {
-            fusionable = !this.particiones[indice].estado && !this.particiones[indice + 1].estado;
+    fusionarParticion(){
+        for(let i = 0; i < this.particiones.length - 1; i++){
+            if (this.particiones[i].estado == false && this.particiones[i+1].estado == false){
+                let particionFusionada = new Particion(null, false, this.particiones[i].tamañoParticion + this.particiones[i+1].tamañoParticion,this.particiones[i].direccionInicio, this.particiones[i+1].direccionFinal);
+                this.particiones.splice(i, 2, particionFusionada);
+                i--; // Con esto se valida nuevamente la posicion
+            }
         }
-        
-        if (fusionable) {
-            const tamanoSiguiente = this.particiones[indice + 1].tamañoParticion;
-            this.particiones[indice].tamañoParticion += tamanoSiguiente;
-            this.particiones.splice(indice + 1, 1);
-        }
-        
-        return fusionable;
     }
 }
