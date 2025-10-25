@@ -1,4 +1,7 @@
-class MemoriaDinamicaConCompactacion extends Memoria{
+import { Memoria } from './Memoria.js'
+import { Particion } from "./Particion.js";
+
+export class MemoriaDinamicaConCompactacion extends Memoria{
     constructor(tamañoMemoria, estrategiaAlgoritmo){
         super(tamañoMemoria, estrategiaAlgoritmo)
     }

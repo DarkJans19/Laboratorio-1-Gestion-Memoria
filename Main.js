@@ -1,114 +1,217 @@
-// Actualizar toda la interfaz para que se vea lo último
-function refrescarVista(){
-    actualizarVisualizacionMemoria();
+import { PrimerAjuste } from './PrimerAjuste.js';
+import { PeorAjuste } from './PeorAjuste.js';
+import { MejorAjuste } from './MejorAjuste.js';
+import { MemoriaDinamicaConCompactacion } from './MemoriaDinamicaConCompactacion.js';
+import { MemoriaDinamicaSinCompactacion } from './MemoriaDinamicaSinCompactacion.js';
+import { MemoriaEstaticaFija } from './MemoriaEstaticaFija.js';
+import { MemoriaEstaticaVariable } from './MemoriaEstaticaVariable.js';
+import { Proceso } from './Proceso.js';
+
+// Variables globales
+let memoriaManager = null;
+let particionElegida = null;
+let algoritmoElegido = null;
+let procesos = [];
+let proximoPID = 1;
+
+// Referencias a elementos del DOM
+const menuParticion = document.getElementById("menu-particion");
+const menuAlgoritmo = document.getElementById("menu-algoritmo");
+const menuAnadirP = document.getElementById("menu-anadirproceso");
+const menuEliminarP = document.getElementById("menu-eliminar-proceso");
+const tipoParticion = document.getElementById("tipo-particion");
+const tipoAlgoritmo = document.getElementById("tipo-algoritmo");
+const listaProcesos = document.getElementById("lista-procesos");
+const reiniciar = document.getElementById("btn-reiniciar");
+
+// Constantes
+const MEMORIA_TOTAL_MiB = 16;
+const TAMANO_PARTICION_MiB = 1;
+const TAMANO_PARTICION_KiB = TAMANO_PARTICION_MiB * 1024;
+const MEMORIA_TOTAL_KiB = MEMORIA_TOTAL_MiB * 1024; // 16 MiB
+
+const PROGRAMAS_PREDEFINIDOS = [
+    { nombre: "Notepad", tamano: 225 },
+    { nombre: "Word", tamano: 289 },
+    { nombre: "Excel", tamano: 309 },
+    { nombre: "AutoCAD", tamano: 436 },
+    { nombre: "Calculadora", tamano: 206 }
+];
+
+// Inicialización cuando se carga la página
+document.addEventListener('DOMContentLoaded', function() {
+    inicializarEventListeners();
     mostrarInformacionMemoria();
-    actualizarListaProcesos();
+});
+
+// Actualizar toda la interfaz
+function refrescarVista() {
+    if (memoriaManager) {
+        actualizarVisualizacionMemoria();
+        mostrarInformacionMemoria();
+        actualizarListaProcesos();
+    }
 }
 
-// Aquí ponemos el Sistema Operativo, siempre ocupa 1024 KiB
+// Inicializar memoria según el tipo seleccionado
+function inicializarMemoria() {
+    if (!particionElegida) return;
+    
+    // Primero crear la estrategia por defecto (se actualizará después con la selección del algoritmo)
+    const estrategiaDefault = new PrimerAjuste();
+    
+    switch(particionElegida) {
+        case 'Estática de tamaño fijo':
+            memoriaManager = new MemoriaEstaticaFija(MEMORIA_TOTAL_KiB, estrategiaDefault);
+            break;
+        case 'Estática de tamaño variable':
+            memoriaManager = new MemoriaEstaticaVariable(MEMORIA_TOTAL_KiB, estrategiaDefault);
+            break;
+        case 'Dinámica (sin compactación)':
+            memoriaManager = new MemoriaDinamicaSinCompactacion(MEMORIA_TOTAL_KiB, estrategiaDefault);
+            memoriaManager.inicializarMemoria();
+            break;
+        case 'Dinámica (con compactación)':
+            memoriaManager = new MemoriaDinamicaConCompactacion(MEMORIA_TOTAL_KiB, estrategiaDefault);
+            memoriaManager.inicializarMemoria();
+            break;
+    }
+    
+    // Agregar Sistema Operativo
+    inicializarMemoriaConSO();
+    proximoPID = 1;
+
+    // CARGAR PROGRAMAS PREDETERMINADOS INMEDIATAMENTE
+    precargarProgramas();
+
+    // Si ya tenemos algoritmo seleccionado, configurarlo
+    if (algoritmoElegido) {
+        configurarEstrategiaAlgoritmo();
+    }
+}
+
 function inicializarMemoriaConSO() {
-    memoria = [{
-        tipo: 'SO',
-        nombre: 'Sistema Operativo',
-        tamano: 1024,
-        ocupado: true,
-        proceso: { nombre: 'SO', tamano: 1024 }
-    }];
+    if (!memoriaManager) return;
+    
+    const procesoSO = new Proceso(0, "SO", 1024);
+    
+    // Para memorias estáticas, asignar el SO a la primera partición
+    if (particionElegida.includes('Estática') && memoriaManager.particiones.length > 0) {
+        memoriaManager.particiones[0].añadirProceso(procesoSO);
+    } else {
+        // Para memoria dinámica, usar el método normal
+        memoriaManager.añadirProceso(procesoSO);
+    }
 }
 
-// Carga automáticamente los primeros 5 programas predefinidos
-function asignarProgramasPredeterminados() {
+// Precargar programas predefinidos
+function precargarProgramas() {
+    if (!memoriaManager) return;
+    
     let programasAsignados = 0;
     
     PROGRAMAS_PREDEFINIDOS.forEach(programa => {
         if (programasAsignados < 5) {
-            const proceso = { nombre: programa.nombre, tamano: programa.tamano };
-
-            // Buscamos particiones que estén libres
-            const particionesLibres = memoria.filter(bloque => 
-                bloque.tipo === 'particion' && !bloque.ocupado
-            );
+            const proceso = new Proceso(proximoPID++, programa.nombre, programa.tamano);
             
-            // Si hay espacio disponible y el programa cabe, lo metemos
-            if (particionesLibres.length > 0 && proceso.tamano <= TAMANO_PARTICION_KiB) {
-                const particion = particionesLibres[0];
-                particion.ocupado = true;
-                particion.proceso = proceso;
-                particion.fragmentacionInterna = TAMANO_PARTICION_KiB - proceso.tamano;
-                
+            try {
+                memoriaManager.añadirProceso(proceso);
                 procesos.push(`${programa.nombre} (${programa.tamano} KiB)`);
                 programasAsignados++;
+            } catch (error) {
+                console.log(`No se pudo asignar ${programa.nombre}: ${error.message}`);
             }
         }
     });
     
-    actualizarVisualizacionMemoria();
-    actualizarListaProcesos();
+    refrescarVista();
 }
 
-// Aquí dibujamos visualmente cómo está la memoria en la pantalla
+// Actualizar visualización de memoria
 function actualizarVisualizacionMemoria() {
+    if (!memoriaManager) return;
+    
     const memoriaBox = document.querySelector('.memoria-box');
     const etiquetasMemoria = document.querySelector('.etiquetas-memoria');
+    const etiquetasHex = document.querySelector('.etiquetas-hex');
 
-    // Limpiamos lo anterior
+    // Limpiar contenido anterior
     memoriaBox.innerHTML = '';
     etiquetasMemoria.innerHTML = '';
-    
-    // Recorremos cada bloque de memoria para dibujarlo
-    memoria.forEach((bloque, index) => {
+    etiquetasHex.innerHTML = '';
+
+    memoriaManager.particiones.forEach((particion) => {
+        // Crear bloque de memoria
         const div = document.createElement('div');
-        // Le ponemos color según si es SO, proceso o está libre
-        div.className = `bloque ${bloque.tipo === 'SO' ? 'so' : bloque.ocupado ? 'proceso' : 'libre'}`;
         
-        let contenido = '';
-        if (bloque.tipo === 'SO') {
-            contenido = 'SO';
-        } else if (bloque.ocupado && bloque.proceso) {
-            // Si hay un proceso, mostramos su nombre y tamaño
-            contenido = `${bloque.proceso.nombre}\n${bloque.proceso.tamano} KiB`;
+        // Determinar clase CSS según el tipo de bloque
+        if (particion.proceso && particion.proceso.nombreProceso === 'SO') {
+            div.className = 'bloque so';
+            div.textContent = 'SO';
+        } else if (particion.estado) {
+            div.className = 'bloque proceso';
+            div.textContent = `${particion.proceso.nombreProceso}\n${particion.proceso.tamañoProceso} KiB`;
         } else {
-            contenido = 'Libre';
+            div.className = 'bloque libre';
+            div.textContent = 'Libre';
         }
         
-        div.textContent = contenido;
         memoriaBox.appendChild(div);
 
-        // Creamos la etiqueta que va al lado mostrando el tamaño
+        // Crear etiqueta de tamaño
         const etiqueta = document.createElement('div');
         etiqueta.className = 'etiqueta-bloque';
-        
-        let textoEtiqueta = '';
-        
-        textoEtiqueta = `${bloque.tamano} KiB`;
-        
-        etiqueta.textContent = textoEtiqueta;
+        etiqueta.textContent = `${particion.tamañoParticion} KiB`;
         etiquetasMemoria.appendChild(etiqueta);
+
+        // Crear etiqueta hexadecimal
+        const etiquetaHex = document.createElement('div');
+        etiquetaHex.className = 'etiqueta-hex';
+        etiquetaHex.textContent = `0x${(particion.direccionInicio * 1024).toString(16).toUpperCase()}`;
+        etiquetasHex.appendChild(etiquetaHex);
     });
 }
 
-// Actualizar la lista de procesos que se muestra arriba
+// Actualizar lista de procesos
 function actualizarListaProcesos() {
-    listaProcesos.textContent = `Procesos: ${procesos.length > 0 ? procesos.join(", ") : "—"}`;
+    if (!memoriaManager) {
+        listaProcesos.textContent = "Procesos: —";
+        return;
+    }
+
+    const procesosActivos = memoriaManager.particiones
+        .filter(p => p.estado && p.proceso && p.proceso.nombreProceso !== 'SO')
+        .map(p => `${p.proceso.nombreProceso} (${p.proceso.tamañoProceso} KiB)`);
+    
+    listaProcesos.textContent = `Procesos: ${procesosActivos.length > 0 ? procesosActivos.join(", ") : "—"}`;
 }
 
-// Muestra toda la info importante
+// Mostrar información de memoria
 function mostrarInformacionMemoria() {
     const infoEleccion = document.querySelector('.info-eleccion');
     
-    const particionesLibres = memoria.filter(b => b.tipo === 'particion' && !b.ocupado).length;
-    const memoriaUsada = memoria.reduce((total, bloque) => 
-        bloque.ocupado ? total + (bloque.proceso?.tamano || 0) : total, 0
-    );
+    if (!memoriaManager) {
+        infoEleccion.innerHTML = `
+            <ul>
+                <li>Particiones libres: —</li>
+                <li>Memoria usada: —</li>
+                <li>Fragmentación interna: —</li>
+            </ul>
+        `;
+        return;
+    }
+
+    const particionesLibres = memoriaManager.particiones.filter(p => !p.estado).length;
+    const memoriaUsada = memoriaManager.particiones
+        .filter(p => p.estado)
+        .reduce((total, p) => total + (p.proceso?.tamañoProceso || 0), 0);
     
-    const fragmentacionInterna = memoria.reduce((total, bloque) => 
-        total + (bloque.fragmentacionInterna || 0), 0
-    );
+    const fragmentacionInterna = memoriaManager.particiones
+        .filter(p => p.estado)
+        .reduce((total, p) => total + (p.tamañoParticion - p.proceso.tamañoProceso), 0);
 
     const html = `
         <ul>
-            <li id="tipo-particion">Partición: ${particionElegida || '—'}</li>
-            <li id="tipo-algoritmo">Algoritmo: ${algoritmoElegido || '—'}</li>
             <li>Particiones libres: ${particionesLibres}</li>
             <li>Memoria usada: ${memoriaUsada} KiB</li>
             <li>Fragmentación interna: ${fragmentacionInterna} KiB</li>
@@ -118,266 +221,248 @@ function mostrarInformacionMemoria() {
     infoEleccion.innerHTML = html;
 }
 
-// Intentar meter un proceso en memoria según el tipo de partición que elegimos
-function asignarProceso(proceso) {
-    if (!particionElegida || !algoritmoElegido) {
+// Asignar proceso
+function asignarProceso(procesoData) {
+    if (!memoriaManager) {
         alert("Primero selecciona tipo de partición y algoritmo");
         return false;
     }
     
-    let resultado = false;
-    
-    // Dependiendo del tipo de partición, llamamos a la función correspondiente
-    switch(particionElegida) {
-        case 'Estática de tamaño fijo':
-            resultado = asignarProcesoEstaticaFija(proceso, algoritmoElegido);
-            break;
-            
-        case 'Estática de tamaño variable':
-            resultado = asignarProcesoEstaticaFijaVariable(proceso, algoritmoElegido);
-            break;
-        case 'Dinámica (sin compactación)':
-            resultado = asignarProcesoDinamicaSinCompactacion(proceso, algoritmoElegido);
-            break;
-        case 'Dinámica (con compactación)':
-            resultado = asignarProcesoDinamicaConCompactacion(proceso, algoritmoElegido);
-            break;
-        default:
-        alert("Error");
+    try {
+        const proceso = new Proceso(proximoPID++, procesoData.nombre, procesoData.tamano);
+        memoriaManager.añadirProceso(proceso);
+        procesos.push(`${procesoData.nombre} (${procesoData.tamano} KiB)`);
+        refrescarVista();
+        return true;
+    } catch (error) {
+        console.error("Error al asignar proceso:", error);
         return false;
+    }
+}
+
+// Eliminar proceso
+function eliminarProceso(nombreProceso) {
+    if (!memoriaManager) {
+        alert("Primero selecciona tipo de partición");
+        return false;
+    }
+    
+    // Buscar el proceso por nombre
+    const particion = memoriaManager.particiones.find(p => 
+        p.proceso && p.proceso.nombreProceso === nombreProceso
+    );
+    
+    if (!particion) {
+        return false;
+    }
+    
+    const pid = particion.proceso.PID;
+    const resultado = memoriaManager.eliminarProceso(pid);
+    
+    if (resultado) {
+        // Remover de la lista de procesos
+        procesos = procesos.filter(p => !p.startsWith(nombreProceso));
+        refrescarVista();
     }
     
     return resultado;
 }
 
-// Función para sacar un proceso de la memoria
-function eliminarProceso(nombreProceso) {
-    if (!particionElegida) {
-        alert("Primero selecciona tipo de partición");
-        return false;
+// Configurar estrategia de algoritmo
+function configurarEstrategiaAlgoritmo() {
+    if (!memoriaManager || !algoritmoElegido) return;
+    
+    let estrategia;
+    switch (algoritmoElegido) {
+        case 'Primer ajuste':
+            estrategia = new PrimerAjuste();
+            break;
+        case 'Mejor ajuste':
+            estrategia = new MejorAjuste();
+            break;
+        case 'Peor ajuste':
+            estrategia = new PeorAjuste();
+            break;
+        default:
+            estrategia = new PrimerAjuste();
     }
     
-    // Cada tipo de partición elimina de forma diferente
-    switch(particionElegida) {
-        case 'Estática de tamaño fijo':
-            return eliminarProcesoEstaticaFija(nombreProceso);
-        case 'Estática de tamaño variable':
-            return  eliminarProcesoEstaticaVariable(nombreProceso);
-        case 'Dinámica (sin compactación)':
-            return eliminarProcesoDinamicaSinCompactacion(nombreProceso);
-        case 'Dinámica (con compactación)':
-            return eliminarProcesoDinamicaConCompactacion(nombreProceso);
-        default:
-            alert("Error");
-            return false;
-    }
+    memoriaManager.estrategiaAlgoritmo = estrategia;
 }
 
-// Esta función aplica el algoritmo de selección (Primer, Mejor o Peor ajuste)
-function aplicarAlgoritmoSeleccion(memoria, tamanoProceso, algoritmo) {
-    const particionesLibres = memoria.filter(bloque =>
-        bloque.tipo === 'particion' &&
-        !bloque.ocupado &&
-        bloque.tamano >= tamanoProceso
-    );
-
-    if (particionesLibres.length === 0) return null;
-
-    // Según el algoritmo elegido, buscamos la partición de diferente manera
-    switch (algoritmo) {
-        case 'Primer ajuste':
-            return primerAjusteFijo(particionesLibres, tamanoProceso);
-        case 'Mejor ajuste':
-            return mejorAjusteFijo(particionesLibres)
-        case 'Peor ajuste':
-            return peorAjusteFijo(particionesLibres, tamanoProceso)
-        default:
-            alert("Error", algoritmo);
-            return null;
-    }
-}
-
-// Botón para seleccionar el tipo de partición
-document.getElementById("btn-particion").addEventListener("click", () => {
-    if (!particionElegida) menuParticion.style.display = "flex";
-    else alert("Reinicia para volver a escoger partición");
-});
-
-// Botón para seleccionar el algoritmo
-document.getElementById("btn-algoritmo").addEventListener("click", () => {
-    if (!particionElegida) return alert("Primero selecciona el tipo de partición");
-    if (!algoritmoElegido) menuAlgoritmo.style.display = "flex";
-    else alert("Reinicia para volver a escoger algoritmo");
-});
-
-// Botón para añadir un nuevo proceso
-document.getElementById("btn-anadir-proceso").addEventListener("click", () => {
-    if (!particionElegida || !algoritmoElegido)
-        return alert("Primero selecciona partición y algoritmo");
-    menuAnadirP.style.display = "flex";
-});
-
-// Botón para eliminar un proceso existente
-document.getElementById("btn-eliminar-proceso").addEventListener("click", () => {
-    if (!particionElegida) return alert("Primero selecciona tipo de partición");
-
+// Actualizar lista para eliminación
+function actualizarListaEliminacion() {
     const select = document.getElementById("proceso-eliminar");
     select.innerHTML = '';
 
-    // Buscamos todos los procesos que están corriendo (excepto SO)
-    const procesosActivos = memoria.filter(b =>
-        b.ocupado && b.proceso && b.proceso.nombre !== 'SO'
-    ).map(b => b.proceso);
-
-    // Eliminamos duplicados usando un Set
-    const nombres = new Set();
-    const unicos = procesosActivos.filter(p => !nombres.has(p.nombre) && nombres.add(p.nombre));
-
-    if (unicos.length === 0) {
-        select.innerHTML = '<option value="">No hay procesos para eliminar</option>';
-    } else {
-        // Agregamos cada proceso
-        unicos.forEach(p => {
-        const option = document.createElement('option');
-        option.value = p.nombre;
-        option.textContent = `${p.nombre} (${p.tamano} KiB)`;
-        select.appendChild(option);
-        });
-    }
-
-    menuEliminarP.style.display = "flex";
-});
-
-// Botones de cerrar para todos los menús
-document.querySelectorAll('[id^="cerrar-"]').forEach(btn => {
-    btn.addEventListener("click", () => {
-        btn.closest(".ventana-oculta").style.display = "none";
-    });
-});
-
-document.querySelectorAll("#menu-particion ul button").forEach(btn => {
-btn.addEventListener("click", (e) => {
-    e.preventDefault();
-
-    // Mapeamos el ID del botón al nombre completo de la partición
-    const map = {
-        'btn-particion-fija': 'Estática de tamaño fijo',
-        'btn-particion-variable': 'Estática de tamaño variable',
-        'btn-particion-dinamica-sin': 'Dinámica (sin compactación)',
-        'btn-particion-dinamica-con': 'Dinámica (con compactación)'
-    };
-
-    const opcion = map[btn.id] || btn.textContent.trim();
-    particionElegida = opcion;
-    tipoParticion.textContent = `Partición: ${particionElegida}`;
-
-    // Para partición fija, solo hay un algoritmo (Primer ajuste)
-    if (btn.id === 'btn-particion-fija') {
-        algoritmoElegido = 'Primer ajuste';
-        tipoAlgoritmo.textContent = `Algoritmo: ${algoritmoElegido}`;
-        if (typeof inicializarParticionesFijas === 'function') {
-            inicializarParticionesFijas();
-        }
-    } 
-    // Para dinámica sin compactación
-    else if (btn.id === 'btn-particion-dinamica-sin') {
-        if (typeof inicializarDinamicaSinCompactacion === 'function') {
-        inicializarDinamicaSinCompactacion();
-        }
-    } 
-    // Para partición variable
-    else if (btn.id === 'btn-particion-variable') {
-        inicializarParticionesFijasVariables();
-    } 
-    
-    // Para dinámica con compactación
-    else if (btn.id === 'btn-particion-dinamica-con') {
-        if (typeof inicializarDinamicaConCompactacion === 'function') {
-            inicializarDinamicaConCompactacion();
-        }
-    }
-
-    else {
-        alert("Opción no reconocida.");
+    if (!memoriaManager) {
+        select.innerHTML = '<option value="">No hay procesos</option>';
         return;
     }
 
-    refrescarVista();
-    menuParticion.style.display = "none";
+    const procesosActivos = memoriaManager.particiones
+        .filter(p => p.estado && p.proceso && p.proceso.nombreProceso !== 'SO')
+        .map(p => p.proceso);
+
+    if (procesosActivos.length === 0) {
+        select.innerHTML = '<option value="">No hay procesos para eliminar</option>';
+    } else {
+        // Eliminar duplicados
+        const nombresUnicos = [...new Set(procesosActivos.map(p => p.nombreProceso))];
+        
+        nombresUnicos.forEach(nombre => {
+            const proceso = procesosActivos.find(p => p.nombreProceso === nombre);
+            const option = document.createElement('option');
+            option.value = nombre;
+            option.textContent = `${nombre} (${proceso.tamañoProceso} KiB)`;
+            select.appendChild(option);
+        });
+    }
+}
+
+// Event Listeners
+function inicializarEventListeners() {
+    // Botón para seleccionar tipo de partición
+    document.getElementById("btn-particion").addEventListener("click", () => {
+        if (!particionElegida) {
+            menuParticion.style.display = "flex";
+        } else {
+            alert("Reinicia para volver a escoger partición");
+        }
     });
-});
 
-// Cuando se selecciona un algoritmo en el menú
-document.querySelectorAll("#menu-algoritmo ul button").forEach(btn => {
-    btn.addEventListener("click", () => {
-        const algoritmoSeleccionado = btn.textContent;
+    // Botón para seleccionar algoritmo
+    document.getElementById("btn-algoritmo").addEventListener("click", () => {
+        if (!particionElegida) {
+            alert("Primero selecciona el tipo de partición");
+        } else if (!algoritmoElegido) {
+            menuAlgoritmo.style.display = "flex";
+        } else {
+            alert("Reinicia para volver a escoger algoritmo");
+        }
+    });
 
-        algoritmoElegido = algoritmoSeleccionado;
-        tipoAlgoritmo.textContent = `Algoritmo: ${algoritmoElegido}`;
-        menuAlgoritmo.style.display = "none";
-        refrescarVista();
+    // Botón para añadir proceso
+    document.getElementById("btn-anadir-proceso").addEventListener("click", () => {
+        if (!particionElegida || !algoritmoElegido) {
+            alert("Primero selecciona partición y algoritmo");
+        } else {
+            menuAnadirP.style.display = "flex";
+        }
+    });
 
-        if (particionElegida === 'Dinámica (sin compactación)') {
-            precargarProgramasDinamicos();
+    // Botón para eliminar proceso
+    document.getElementById("btn-eliminar-proceso").addEventListener("click", () => {
+        if (!particionElegida) {
+            alert("Primero selecciona tipo de partición");
+        } else {
+            actualizarListaEliminacion();
+            menuEliminarP.style.display = "flex";
+        }
+    });
+
+    // Botones de cerrar
+    document.querySelectorAll('[id^="cerrar-"]').forEach(btn => {
+        btn.addEventListener("click", () => {
+            btn.closest(".ventana-oculta").style.display = "none";
+        });
+    });
+
+    // Selección de partición
+    document.querySelectorAll("#menu-particion ul button").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            const map = {
+                'btn-particion-fija': 'Estática de tamaño fijo',
+                'btn-particion-variable': 'Estática de tamaño variable',
+                'btn-particion-dinamica-sin': 'Dinámica (sin compactación)',
+                'btn-particion-dinamica-con': 'Dinámica (con compactación)'
+            };
+
+            particionElegida = map[btn.id];
+            tipoParticion.textContent = `Partición: ${particionElegida}`;
+            
+            // Inicializar la memoria cuando se selecciona partición
+            inicializarMemoria();
+            
+            menuParticion.style.display = "none";
+            refrescarVista();
+        });
+    });
+
+    // Selección de algoritmo
+    document.querySelectorAll("#menu-algoritmo ul button").forEach(btn => {
+        btn.addEventListener("click", () => {
+            algoritmoElegido = btn.textContent;
+            tipoAlgoritmo.textContent = `Algoritmo: ${algoritmoElegido}`;
+            
+            // Configurar la estrategia cuando se selecciona algoritmo
+            configurarEstrategiaAlgoritmo();
+            
+            menuAlgoritmo.style.display = "none";
+            refrescarVista();
+        });
+    });
+
+    // Agregar proceso
+    document.getElementById("btn-agregar-proceso").addEventListener("click", e => {
+        e.preventDefault();
+        const nombre = document.getElementById("nombre-proceso").value.trim();
+        const tamano = parseInt(document.getElementById("tamano-proceso").value);
+
+        if (!nombre) {
+            alert("El nombre del proceso no puede estar vacío");
+            return;
+        }
+        if (isNaN(tamano) || tamano <= 0) {
+            alert("El tamaño debe ser mayor que 0");
+            return;
         }
 
-        if (particionElegida === 'Dinámica (con compactación)') {
-            precargarProgramasDinamicos();
+        if (asignarProceso({ nombre, tamano })) {
+            alert(`Proceso "${nombre}" añadido exitosamente`);
+        } else {
+            alert(`No se pudo añadir el proceso "${nombre}" - No hay espacio suficiente`);
         }
+
+        document.getElementById("nombre-proceso").value = "";
+        document.getElementById("tamano-proceso").value = "";
+        menuAnadirP.style.display = "none";
     });
-});
 
-document.getElementById("btn-agregar-proceso").addEventListener("click", e => {
-    e.preventDefault();
-    const nombre = document.getElementById("nombre-proceso").value.trim();
-    const tamano = parseInt(document.getElementById("tamano-proceso").value);
+    // Eliminar proceso
+    document.getElementById("btn-eliminar-proceso-form").addEventListener("click", e => {
+        e.preventDefault();
+        const nombreProceso = document.getElementById("proceso-eliminar").value;
+        if (!nombreProceso) {
+            alert("No hay procesos para eliminar");
+            return;
+        }
 
-    // Validaciones 
-    if (!nombre) return alert("El nombre del proceso no puede estar vacío");
-    if (isNaN(tamano) || tamano <= 0) return alert("El tamaño debe ser mayor que 0");
+        if (eliminarProceso(nombreProceso)) {
+            alert(`Proceso ${nombreProceso} eliminado`);
+        } else {
+            alert(`No se encontró el proceso ${nombreProceso}`);
+        }
+        menuEliminarP.style.display = "none";
+        actualizarVisualizacionMemoria();
+    });
 
-    const proceso = { nombre, tamano };
-    if (asignarProceso(proceso)) {
-        alert(`Proceso "${nombre}" añadido exitosamente`);
-    } else {
-        alert(`No se pudo añadir el proceso "${nombre}"`);
-    }
+    // Reiniciar
+    reiniciar.addEventListener("click", () => {
+        memoriaManager = null;
+        particionElegida = null;
+        algoritmoElegido = null;
+        procesos = [];
+        proximoPID = 1;
 
-    // Limpiar los campos del formulario
-    document.getElementById("nombre-proceso").value = "";
-    document.getElementById("tamano-proceso").value = "";
-    menuAnadirP.style.display = "none";
-});
+        tipoParticion.textContent = "Partición: —";
+        tipoAlgoritmo.textContent = "Algoritmo: —";
+        listaProcesos.textContent = "Procesos: —";
 
-// Eliminar proceso en el formulario
-document.getElementById("btn-eliminar-proceso-form").addEventListener("click", e => {
-    e.preventDefault();
-    const nombreProceso = document.getElementById("proceso-eliminar").value;
-    if (!nombreProceso) return alert("No hay procesos para eliminar");
-
-    if (eliminarProceso(nombreProceso)) {
-        alert(`Proceso ${nombreProceso} eliminado`);
-        refrescarVista();
-    } else {
-        alert(`No se encontró el proceso ${nombreProceso}`);
-    }
-    menuEliminarP.style.display = "none";
-});
-
-// Reiniciar toda la simulación
-reiniciar.addEventListener("click", () => {
-    particionElegida = null;
-    algoritmoElegido = null;
-    procesos = [];
-    memoria = [];
-
-    tipoParticion.textContent = "Partición: —";
-    tipoAlgoritmo.textContent = "Algoritmo: —";
-    listaProcesos.textContent = "Procesos: —";
-
-    // Limpiar la visualización de memoria
-    document.querySelector('.memoria-box').innerHTML = '';
-    document.querySelector('.etiquetas-memoria').innerHTML = '';
-    mostrarInformacionMemoria();
-});
-document.addEventListener('DOMContentLoaded', mostrarInformacionMemoria);
+        document.querySelector('.memoria-box').innerHTML = '';
+        document.querySelector('.etiquetas-memoria').innerHTML = '';
+        document.querySelector('.etiquetas-hex').innerHTML = '';
+        mostrarInformacionMemoria();
+    });
+}

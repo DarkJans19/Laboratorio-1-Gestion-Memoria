@@ -1,4 +1,6 @@
-class PeorAjuste extends EstrategiaAlgoritmo {
+import { EstrategiaAlgoritmo } from './EstrategiaAlgoritmo.js';
+
+export class PeorAjuste extends EstrategiaAlgoritmo {
     buscarHueco(particiones, proceso) {
         let peorParticion = null;
         

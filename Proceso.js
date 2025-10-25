@@ -1,4 +1,4 @@
-class Proceso{
+export class Proceso{
     constructor (PID, nombreProceso, tamañoProceso){
         this.PID = PID;
         this.nombreProceso = nombreProceso;

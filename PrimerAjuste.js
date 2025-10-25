@@ -1,4 +1,6 @@
-class PrimerAjuste extends EstrategiaAlgoritmo {
+import { EstrategiaAlgoritmo } from './EstrategiaAlgoritmo.js';
+
+export class PrimerAjuste extends EstrategiaAlgoritmo {
     buscarHueco(particiones, proceso) {
         for (let particion of particiones) {
             // Verificar: partición libre Y tamaño suficiente

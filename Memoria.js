@@ -1,4 +1,4 @@
-class Memoria{
+export class Memoria{
     constructor(tamañoMemoria, estrategiaAlgoritmo){
         this.tamañoMemoria = tamañoMemoria;
         this.particiones = [];
@@ -28,10 +28,15 @@ class Memoria{
     }
 
     eliminarProceso(PID){
+        let procesoEliminado = false;
+        
         this.particiones.forEach(particion => {
             if(particion.proceso && particion.proceso.PID === PID){
                 particion.eliminarProceso();
+                procesoEliminado = true;
             }            
         });
+        
+        return procesoEliminado;
     }
 }
