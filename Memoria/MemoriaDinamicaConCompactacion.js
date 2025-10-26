@@ -1,7 +1,7 @@
 import { Memoria } from './Memoria.js'
-import { Particion } from "./Particion.js";
+import { Particion } from "/Particion/Particion.js";
 
-export class MemoriaDinamicaSinCompactacion extends Memoria{
+export class MemoriaDinamicaConCompactacion extends Memoria{
     constructor(tamañoMemoria, estrategiaAlgoritmo){
         super(tamañoMemoria, estrategiaAlgoritmo)
     }
@@ -34,6 +34,7 @@ export class MemoriaDinamicaSinCompactacion extends Memoria{
         if (indice === -1) return false;
         
         this.particiones[indice].eliminarProceso();
+        this.compactarMemoria();
         this.fusionarParticion();
         return true;
     }
@@ -88,6 +89,30 @@ export class MemoriaDinamicaSinCompactacion extends Memoria{
             if (this.particiones[i].estado == false && this.particiones[i+1].estado == false){
                 let particionFusionada = new Particion(null, false, this.particiones[i].tamañoParticion + this.particiones[i+1].tamañoParticion,this.particiones[i].direccionInicio, this.particiones[i+1].direccionFinal);
                 this.particiones.splice(i, 2, particionFusionada);
+                i--; // Con esto se valida nuevamente la posicion
+            }
+        }
+    }
+
+    compactarMemoria(){
+        for(let i = 0; i < this.particiones.length - 1; i++){
+            if (this.particiones[i].estado == false && this.particiones[i+1].estado == true){
+                // espacio ocupado
+                let particionCompactada = new Particion(
+                    this.particiones[i+1].proceso, 
+                    true, 
+                    this.particiones[i+1].tamañoParticion,
+                    this.particiones[i].direccionInicio,
+                    this.particiones[i].direccionInicio + this.particiones[i+1].tamañoParticion - 1);
+                // espacio liberado
+                let particionLiberada = new Particion(
+                    null,
+                    false,
+                    this.particiones[i].tamañoParticion,
+                    particionCompactada.direccionInicio + particionCompactada.tamañoParticion,
+                    particionCompactada.direccionFinal + this.particiones[i].tamañoParticion
+                );
+                this.particiones.splice(i, 2, particionCompactada, particionLiberada);
                 i--; // Con esto se valida nuevamente la posicion
             }
         }

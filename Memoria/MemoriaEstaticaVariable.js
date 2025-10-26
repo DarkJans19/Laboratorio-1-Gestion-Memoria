@@ -1,5 +1,5 @@
 import { Memoria } from './Memoria.js'
-import { Particion } from "./Particion.js";
+import { Particion } from "/Particion/Particion.js";
 
 export class MemoriaEstaticaVariable extends Memoria{
     constructor(tamañoMemoria, estrategiaAlgoritmo){

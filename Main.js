@@ -1,11 +1,11 @@
-import { PrimerAjuste } from './PrimerAjuste.js';
-import { PeorAjuste } from './PeorAjuste.js';
-import { MejorAjuste } from './MejorAjuste.js';
-import { MemoriaDinamicaConCompactacion } from './MemoriaDinamicaConCompactacion.js';
-import { MemoriaDinamicaSinCompactacion } from './MemoriaDinamicaSinCompactacion.js';
-import { MemoriaEstaticaFija } from './MemoriaEstaticaFija.js';
-import { MemoriaEstaticaVariable } from './MemoriaEstaticaVariable.js';
-import { Proceso } from './Proceso.js';
+import { PrimerAjuste } from './Algoritmos/PrimerAjuste.js';
+import { PeorAjuste } from './Algoritmos/PeorAjuste.js';
+import { MejorAjuste } from './Algoritmos/MejorAjuste.js';
+import { MemoriaDinamicaConCompactacion } from './Memoria/MemoriaDinamicaConCompactacion.js';
+import { MemoriaDinamicaSinCompactacion } from './Memoria/MemoriaDinamicaSinCompactacion.js';
+import { MemoriaEstaticaFija } from './Memoria/MemoriaEstaticaFija.js';
+import { MemoriaEstaticaVariable } from './Memoria/MemoriaEstaticaVariable.js';
+import { Proceso } from './Proceso/Proceso.js';
 
 // Variables globales
 let memoriaManager = null;
