@@ -14,34 +14,11 @@ let algoritmoElegido = null;
 let procesos = [];
 let proximoPID = 1;
 
-// Referencias a elementos del DOM
-const menuParticion = document.getElementById("menu-particion");
-const menuAlgoritmo = document.getElementById("menu-algoritmo");
-const menuAnadirP = document.getElementById("menu-anadirproceso");
-const menuEliminarP = document.getElementById("menu-eliminar-proceso");
-const tipoParticion = document.getElementById("tipo-particion");
-const tipoAlgoritmo = document.getElementById("tipo-algoritmo");
-const listaProcesos = document.getElementById("lista-procesos");
-const reiniciar = document.getElementById("btn-reiniciar");
-
-// Constantes
-const MEMORIA_TOTAL_MiB = 16;
-const TAMANO_PARTICION_MiB = 1;
-const TAMANO_PARTICION_KiB = TAMANO_PARTICION_MiB * 1024;
-const MEMORIA_TOTAL_KiB = MEMORIA_TOTAL_MiB * 1024; // 16 MiB
-
-const PROGRAMAS_PREDEFINIDOS = [
-    { nombre: "Notepad", tamano: 225 },
-    { nombre: "Word", tamano: 289 },
-    { nombre: "Excel", tamano: 309 },
-    { nombre: "AutoCAD", tamano: 436 },
-    { nombre: "Calculadora", tamano: 206 }
-];
-
 // Inicialización cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
     inicializarEventListeners();
     mostrarInformacionMemoria();
+    inicializarBotonesProcesos();
 });
 
 // Actualizar toda la interfaz
@@ -285,9 +262,6 @@ function configurarEstrategiaAlgoritmo() {
     }
     
     memoriaManager.estrategiaAlgoritmo = estrategia;
-
-    // CARGAR PROGRAMAS PREDETERMINADOS INMEDIATAMENTE
-    precargarProgramas();
 }
 
 // Actualizar lista para eliminación
@@ -320,6 +294,20 @@ function actualizarListaEliminacion() {
     }
 }
 
+function inicializarBotonesProcesos() {
+    PROGRAMAS_PREDEFINIDOS.forEach(programa => {
+        const nuevoLi = document.createElement("li");
+        const botonProceso = document.createElement('button');
+        botonProceso.textContent = programa.nombre;
+        
+        botonProceso.addEventListener('click', function() {
+            asignarProceso(programa);
+        });
+        nuevoLi.appendChild(botonProceso);
+        menuProcesosPredeterminados.appendChild(nuevoLi);
+    });
+}
+
 // Event Listeners
 function inicializarEventListeners() {
     // Botón para seleccionar tipo de partición
@@ -339,6 +327,15 @@ function inicializarEventListeners() {
             menuAlgoritmo.style.display = "flex";
         } else {
             alert("Reinicia para volver a escoger algoritmo");
+        }
+    });
+
+    // Boton para seleccionar procesos predeterminados
+    document.getElementById("btn-procesos-predeterminados").addEventListener("click", () => {
+        if (!particionElegida || !algoritmoElegido) {
+        alert("Primero selecciona partición y algoritmo");
+        } else {
+        document.getElementById("menu-procesos").style.display = "flex";
         }
     });
 

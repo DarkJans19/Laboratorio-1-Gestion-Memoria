@@ -1,0 +1,10 @@
+// Referencias a elementos del DOM
+const menuParticion = document.getElementById("menu-particion");
+const menuAlgoritmo = document.getElementById("menu-algoritmo");
+const menuAnadirP = document.getElementById("menu-anadirproceso");
+const menuEliminarP = document.getElementById("menu-eliminar-proceso");
+const tipoParticion = document.getElementById("tipo-particion");
+const tipoAlgoritmo = document.getElementById("tipo-algoritmo");
+const listaProcesos = document.getElementById("lista-procesos");
+const menuProcesosPredeterminados = document.getElementById("menu-procesos")
+const reiniciar = document.getElementById("btn-reiniciar");

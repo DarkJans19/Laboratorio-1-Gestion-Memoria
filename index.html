@@ -12,6 +12,7 @@
     <div class="menu">
       <button id="btn-particion">Partición</button>
       <button id="btn-algoritmo">Algoritmo</button>
+      <button id="btn-procesos-predeterminados">Procesos Predefinidos</button>
       <button id="btn-anadir-proceso">Añadir Proceso</button>
       <button id="btn-eliminar-proceso">Eliminar Proceso</button>
     </div>
@@ -62,6 +63,17 @@
     </div>
   </div>
 
+  <div id="menu-procesos" class="ventana-oculta">
+    <div class="ventana-contenido">
+      <h2>Seleccionar Proceso Predefinido</h2>
+      <ul>
+        <!-- Aquí se crean los botones dinamicamente -->
+      </ul>
+      <button id="cerrar-proceso">Cerrar</button>
+    </div>
+  </div>
+
+
   <div id="menu-anadirproceso" class="ventana-oculta">
     <div class="ventana-contenido">
       <h2>Añadir nuevo proceso</h2>
@@ -104,6 +116,7 @@
   <script type="module" src="Memoria/MemoriaDinamicaSinCompactacion.js"></script>
   <script type="module" src="Memoria/MemoriaDinamicaConCompactacion.js"></script>
   <script type="module" src="Main.js"></script>
-
+  <script src="Dom-References.js"></script>
+  <script src="Constantes.js"></script>
 </body>
 </html>
