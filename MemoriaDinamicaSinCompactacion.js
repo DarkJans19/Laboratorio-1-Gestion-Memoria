@@ -62,15 +62,20 @@ export class MemoriaDinamicaSinCompactacion extends Memoria{
             division.finalProceso
         );
         
-        const particionLibre = new Particion(
-            null, 
-            false, 
-            division.tamañoLibre, 
-            division.inicioLibre, 
-            division.finalLibre
-        );
-        
-        return [particionProceso, particionLibre];
+        // SOLO crear partición libre si hay espacio sobrante
+        if (division.tamañoLibre > 0) {
+            const particionLibre = new Particion(
+                null, 
+                false, 
+                division.tamañoLibre, 
+                division.inicioLibre, 
+                division.finalLibre
+            );
+            return [particionProceso, particionLibre];
+        } else {
+            // Si no hay espacio libre, retornar solo el proceso
+            return [particionProceso];
+        }
     }
 
     actualizarMemoria(indiceHueco, nuevasParticiones) {

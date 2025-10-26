@@ -63,20 +63,35 @@ export class MemoriaDinamicaConCompactacion extends Memoria{
             division.finalProceso
         );
         
-        const particionLibre = new Particion(
-            null, 
-            false, 
-            division.tamañoLibre, 
-            division.inicioLibre, 
-            division.finalLibre
-        );
-        
-        return [particionProceso, particionLibre];
+        // SOLO crear partición libre si hay espacio sobrante
+        if (division.tamañoLibre > 0) {
+            const particionLibre = new Particion(
+                null, 
+                false, 
+                division.tamañoLibre, 
+                division.inicioLibre, 
+                division.finalLibre
+            );
+            return [particionProceso, particionLibre];
+        } else {
+            // Si no hay espacio libre, retornar solo el proceso
+            return [particionProceso];
+        }
     }
 
     actualizarMemoria(indiceHueco, nuevasParticiones) {
         this.particiones.splice(indiceHueco, 1, ...nuevasParticiones);
         return true;
+    }
+
+    fusionarParticion(){
+        for(let i = 0; i < this.particiones.length - 1; i++){
+            if (this.particiones[i].estado == false && this.particiones[i+1].estado == false){
+                let particionFusionada = new Particion(null, false, this.particiones[i].tamañoParticion + this.particiones[i+1].tamañoParticion,this.particiones[i].direccionInicio, this.particiones[i+1].direccionFinal);
+                this.particiones.splice(i, 2, particionFusionada);
+                i--; // Con esto se valida nuevamente la posicion
+            }
+        }
     }
 
     compactarMemoria(){
@@ -89,13 +104,13 @@ export class MemoriaDinamicaConCompactacion extends Memoria{
                     this.particiones[i+1].tamañoParticion,
                     this.particiones[i].direccionInicio,
                     this.particiones[i].direccionInicio + this.particiones[i+1].tamañoParticion - 1);
-                // espacio librerado
+                // espacio liberado
                 let particionLiberada = new Particion(
                     null,
                     false,
                     this.particiones[i].tamañoParticion,
                     particionCompactada.direccionInicio + particionCompactada.tamañoParticion,
-                    particionCompactada.direccionFinal + this.particiones[i].tamañoParticion - 1
+                    particionCompactada.direccionFinal + this.particiones[i].tamañoParticion
                 );
                 this.particiones.splice(i, 2, particionCompactada, particionLiberada);
                 i--; // Con esto se valida nuevamente la posicion

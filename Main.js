@@ -81,9 +81,6 @@ function inicializarMemoria() {
     inicializarMemoriaConSO();
     proximoPID = 1;
 
-    // CARGAR PROGRAMAS PREDETERMINADOS INMEDIATAMENTE
-    precargarProgramas();
-
     // Si ya tenemos algoritmo seleccionado, configurarlo
     if (algoritmoElegido) {
         configurarEstrategiaAlgoritmo();
@@ -288,6 +285,9 @@ function configurarEstrategiaAlgoritmo() {
     }
     
     memoriaManager.estrategiaAlgoritmo = estrategia;
+
+    // CARGAR PROGRAMAS PREDETERMINADOS INMEDIATAMENTE
+    precargarProgramas();
 }
 
 // Actualizar lista para eliminación
