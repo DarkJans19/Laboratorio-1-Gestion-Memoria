@@ -15,6 +15,7 @@
       <button id="btn-procesos-predeterminados">Procesos Predefinidos</button>
       <button id="btn-anadir-proceso">Añadir Proceso</button>
       <button id="btn-eliminar-proceso">Eliminar Proceso</button>
+      <button id="btn-ver-tablas">Ver Tablas de Procesos</button>
     </div>
 
     <div class="memoria">
@@ -119,6 +120,59 @@
         <button id="btn-eliminar-proceso-form" type="button">Eliminar</button>
       </form>
       <button id="cerrar-eliminar">Cerrar</button>
+    </div>
+  </div>
+
+  <!-- Añade esto antes del cierre </body> -->
+  <div id="ventana-tablas-procesos" class="ventana-modal" style="display:none;">
+    <div class="ventana-contenido" style="width: 600px; max-height: 80vh; overflow-y: auto;">
+      <h2>Tablas de Segmentos de Procesos</h2>
+      
+      <!-- Selector de proceso -->
+      <div style="margin-bottom: 20px;">
+        <label for="selector-proceso-tabla">Seleccionar proceso:</label>
+        <select id="selector-proceso-tabla" style="margin-left: 10px; padding: 5px;">
+          <option value="">-- Selecciona un proceso --</option>
+        </select>
+      </div>
+      
+      <!-- Información general del proceso -->
+      <div id="info-proceso-tabla" style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none;">
+        <h3 id="nombre-proceso-tabla"></h3>
+        <p><strong>PID:</strong> <span id="pid-proceso-tabla"></span></p>
+        <p><strong>Tamaño total:</strong> <span id="tamano-proceso-tabla"></span> KiB</p>
+      </div>
+      
+      <!-- Tabla de segmentos -->
+      <div id="contenedor-tabla-segmentos" style="display: none;">
+        <h4>Tabla de Segmentos</h4>
+        <table id="tabla-segmentos" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr style="background: #b10909; color: white;">
+              <th style="padding: 8px; border: 1px solid #ddd;">ID</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Nombre</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Tamaño (KiB)</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Dirección Base</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Dirección Física</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Permisos</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Estado</th>
+            </tr>
+          </thead>
+          <tbody id="cuerpo-tabla-segmentos">
+            <!-- Se llena dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Mapa de memoria del proceso -->
+      <div id="mapa-memoria-proceso" style="margin-top: 20px; display: none;">
+        <h4>Mapa de Memoria del Proceso</h4>
+        <div id="visualizacion-memoria-proceso" style="border: 2px solid #333; background: #fff; min-height: 200px; padding: 10px;">
+          <!-- Visualización específica del proceso -->
+        </div>
+      </div>
+      
+      <button onclick="document.getElementById('ventana-tablas-procesos').style.display='none'" style="margin-top: 20px;">Cerrar</button>
     </div>
   </div>
 

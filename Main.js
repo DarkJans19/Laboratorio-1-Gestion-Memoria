@@ -321,10 +321,41 @@ function inicializarBotonesProcesos() {
         botonSegmentos.textContent = "Editar segmentos";
         botonSegmentos.addEventListener('click', () => abrirVentanaSegmentos(programa));
 
+        // NUEVO: Botón para ver tabla (solo cuando el proceso esté cargado)
+        const botonVerTabla = document.createElement('button');
+        botonVerTabla.textContent = "Ver tabla";
+        botonVerTabla.addEventListener('click', () => {
+            // Buscar si el proceso ya está cargado
+            const procesoCargado = encontrarProcesoPorNombre(programa.nombre);
+            if (procesoCargado) {
+                abrirVentanaTablasProcesos();
+                // Seleccionar automáticamente este proceso
+                setTimeout(() => {
+                    document.getElementById('selector-proceso-tabla').value = procesoCargado.PID;
+                    mostrarTablaProceso(procesoCargado.PID);
+                }, 100);
+            } else {
+                alert("El proceso debe estar cargado en memoria para ver su tabla");
+            }
+        });
+
         nuevoLi.appendChild(botonProceso);
         nuevoLi.appendChild(botonSegmentos);
+        nuevoLi.appendChild(botonVerTabla);
         menuProcesosPredeterminados.appendChild(nuevoLi);
     });
+}
+
+// Función auxiliar para encontrar proceso por nombre
+function encontrarProcesoPorNombre(nombre) {
+    if (!memoriaManager) return null;
+    
+    for (let particion of memoriaManager.particiones) {
+        if (particion.estado && particion.proceso && particion.proceso.nombreProceso === nombre) {
+            return particion.proceso;
+        }
+    }
+    return null;
 }
 
 function abrirVentanaSegmentos(programa) {
@@ -372,6 +403,178 @@ function abrirVentanaSegmentos(programa) {
     };
 }
 
+// Función para abrir la ventana de tablas
+function abrirVentanaTablasProcesos() {
+    if (!memoriaManager) {
+        alert("Primero inicializa la memoria con algún tipo de partición");
+        return;
+    }
+    
+    const modal = document.getElementById("ventana-tablas-procesos");
+    actualizarSelectorProcesos();
+    modal.style.display = "block";
+}
+
+// Actualizar el selector de procesos
+function actualizarSelectorProcesos() {
+    const selector = document.getElementById("selector-proceso-tabla");
+    selector.innerHTML = '<option value="">-- Selecciona un proceso --</option>';
+    
+    if (!memoriaManager) return;
+    
+    // Obtener procesos únicos (pueden tener múltiples particiones/segmentos)
+    const procesosUnicos = [];
+    const procesosVistos = new Set();
+    
+    memoriaManager.particiones.forEach(particion => {
+        if (particion.estado && particion.proceso && particion.proceso.nombreProceso !== 'SO') {
+            if (!procesosVistos.has(particion.proceso.PID)) {
+                procesosVistos.add(particion.proceso.PID);
+                procesosUnicos.push(particion.proceso);
+            }
+        }
+    });
+    
+    // Añadir opciones al selector
+    procesosUnicos.forEach(proceso => {
+        const option = document.createElement('option');
+        option.value = proceso.PID;
+        option.textContent = `${proceso.nombreProceso} (PID: ${proceso.PID})`;
+        selector.appendChild(option);
+    });
+    
+    // Añadir evento al selector
+    selector.onchange = function() {
+        const pidSeleccionado = parseInt(this.value);
+        if (pidSeleccionado) {
+            mostrarTablaProceso(pidSeleccionado);
+        } else {
+            ocultarTablas();
+        }
+    };
+}
+
+// Mostrar tabla de un proceso específico
+function mostrarTablaProceso(pid) {
+    const proceso = encontrarProcesoPorPID(pid);
+    if (!proceso) return;
+    
+    // Mostrar información general
+    document.getElementById('info-proceso-tabla').style.display = 'block';
+    document.getElementById('nombre-proceso-tabla').textContent = proceso.nombreProceso;
+    document.getElementById('pid-proceso-tabla').textContent = proceso.PID;
+    document.getElementById('tamano-proceso-tabla').textContent = proceso.tamañoReal + ' KiB';
+    
+    // Mostrar tabla de segmentos
+    mostrarTablaSegmentos(proceso);
+    
+    // Mostrar mapa de memoria
+    mostrarMapaMemoriaProceso(proceso);
+}
+
+// Encontrar proceso por PID
+function encontrarProcesoPorPID(pid) {
+    if (!memoriaManager) return null;
+    
+    for (let particion of memoriaManager.particiones) {
+        if (particion.estado && particion.proceso && particion.proceso.PID === pid) {
+            return particion.proceso;
+        }
+    }
+    return null;
+}
+
+// Mostrar tabla de segmentos
+function mostrarTablaSegmentos(proceso) {
+    const cuerpoTabla = document.getElementById('cuerpo-tabla-segmentos');
+    cuerpoTabla.innerHTML = '';
+    
+    if (!proceso.tablaSegmentos || proceso.tablaSegmentos.length === 0) {
+        cuerpoTabla.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay segmentos definidos</td></tr>';
+        return;
+    }
+    
+    proceso.tablaSegmentos.forEach(segmento => {
+        const fila = document.createElement('tr');
+        
+        const estaCargado = segmento.direccionFisica !== null && segmento.direccionFisica !== undefined;
+        
+        fila.innerHTML = `
+            <td>${segmento.id}</td>
+            <td>${segmento.nombre}</td>
+            <td>${segmento.tamaño} KiB</td>
+            <td>0x${segmento.direccionBase.toString(16).toUpperCase()}</td>
+            <td>${estaCargado ? '0x' + (segmento.direccionFisica * 1024).toString(16).toUpperCase() : '—'}</td>
+            <td>${segmento.permiso || 'RW'}</td>
+            <td class="${estaCargado ? 'estado-cargado' : 'estado-no-cargado'}">
+                ${estaCargado ? 'CARGADO' : 'NO CARGADO'}
+            </td>
+        `;
+        
+        cuerpoTabla.appendChild(fila);
+    });
+    
+    document.getElementById('contenedor-tabla-segmentos').style.display = 'block';
+}
+
+// Mostrar mapa de memoria del proceso
+function mostrarMapaMemoriaProceso(proceso) {
+    const contenedor = document.getElementById('visualizacion-memoria-proceso');
+    contenedor.innerHTML = '';
+    
+    if (!proceso.tablaSegmentos) return;
+    
+    // Crear visualización del espacio de direcciones del proceso
+    const mapa = document.createElement('div');
+    mapa.className = 'mapa-memoria-proceso';
+    
+    proceso.tablaSegmentos.forEach(segmento => {
+        const bloque = document.createElement('div');
+        bloque.className = `bloque-memoria-proceso ${segmento.direccionFisica ? 'bloque-segmento' : 'bloque-no-asignado'}`;
+        
+        const estado = segmento.direccionFisica ? 'Cargado' : 'No cargado';
+        const direccionFisica = segmento.direccionFisica ? 
+            `0x${(segmento.direccionFisica * 1024).toString(16).toUpperCase()}` : '—';
+        
+        bloque.innerHTML = `
+            <strong>${segmento.nombre}</strong><br>
+            Tamaño: ${segmento.tamaño} KiB<br>
+            Dirección lógica: 0x${segmento.direccionBase.toString(16).toUpperCase()}<br>
+            Dirección física: ${direccionFisica}<br>
+            <em>${estado}</em>
+        `;
+        
+        // Ajustar altura proporcional al tamaño
+        const alturaBase = 80; // altura base en px
+        const altura = Math.max(alturaBase, (segmento.tamaño / 50) * alturaBase);
+        bloque.style.height = `${altura}px`;
+        bloque.style.minHeight = `${alturaBase}px`;
+        
+        mapa.appendChild(bloque);
+    });
+    
+    contenedor.appendChild(mapa);
+    document.getElementById('mapa-memoria-proceso').style.display = 'block';
+}
+
+// Ocultar tablas
+function ocultarTablas() {
+    document.getElementById('info-proceso-tabla').style.display = 'none';
+    document.getElementById('contenedor-tabla-segmentos').style.display = 'none';
+    document.getElementById('mapa-memoria-proceso').style.display = 'none';
+}
+
+// Función para traducción de direcciones (demo)
+function demostrarTraduccionDireccion(proceso, segmentoId, desplazamiento) {
+    try {
+        const direccionFisica = proceso.traducirDireccion(segmentoId, desplazamiento);
+        console.log(`Traducción: Segmento ${segmentoId} + ${desplazamiento} = 0x${direccionFisica.toString(16).toUpperCase()}`);
+        return direccionFisica;
+    } catch (error) {
+        console.error('Error en traducción:', error.message);
+        return null;
+    }
+}
 
 // Event Listeners
 function inicializarEventListeners() {
@@ -382,6 +585,10 @@ function inicializarEventListeners() {
         } else {
             alert("Reinicia para volver a escoger partición");
         }
+    });
+
+    document.getElementById("btn-ver-tablas").addEventListener("click", () => {
+        abrirVentanaTablasProcesos();
     });
 
     // Botón para seleccionar algoritmo

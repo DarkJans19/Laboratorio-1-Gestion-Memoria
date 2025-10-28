@@ -307,3 +307,65 @@ body {
   display: flex;
   justify-content: space-between;
 }
+
+/* Añade esto a style.css */
+.tabla-segmentos {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+.tabla-segmentos th,
+.tabla-segmentos td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.tabla-segmentos th {
+  background-color: #b10909;
+  color: white;
+}
+
+.tabla-segmentos tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.tabla-segmentos tr:hover {
+  background-color: #f5f5f5;
+}
+
+.estado-cargado {
+  color: #2E7D32;
+  font-weight: bold;
+}
+
+.estado-no-cargado {
+  color: #D32F2F;
+  font-weight: bold;
+}
+
+.mapa-memoria-proceso {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 10px;
+}
+
+.bloque-memoria-proceso {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.bloque-segmento {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+}
+
+.bloque-no-asignado {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  color: white;
+}
