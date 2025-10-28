@@ -8,6 +8,8 @@ export class Particion {
         this._tamañoParticion = tamañoParticion;
         this.direccionInicio = direccionInicio;
         this.direccionFinal = direccionFinal;
+
+        this.segmento = null;
     }
 
     get tamañoParticion(){

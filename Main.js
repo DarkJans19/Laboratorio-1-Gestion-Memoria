@@ -5,6 +5,7 @@ import { MemoriaDinamicaConCompactacion } from './Memoria/MemoriaDinamicaConComp
 import { MemoriaDinamicaSinCompactacion } from './Memoria/MemoriaDinamicaSinCompactacion.js';
 import { MemoriaEstaticaFija } from './Memoria/MemoriaEstaticaFija.js';
 import { MemoriaEstaticaVariable } from './Memoria/MemoriaEstaticaVariable.js';
+import { MemoriaSegmentada } from './Memoria/MemoriaSegmentada.js';
 import { Proceso } from './Proceso/Proceso.js';
 
 // Variables globales
@@ -51,6 +52,9 @@ function inicializarMemoria() {
         case 'Dinámica (con compactación)':
             memoriaManager = new MemoriaDinamicaConCompactacion(MEMORIA_TOTAL_KiB, estrategiaDefault);
             memoriaManager.inicializarMemoria();
+            break;
+        case 'Segmentación Pura':
+            memoriaManager = new MemoriaSegmentada(MEMORIA_TOTAL_KiB, estrategiaDefault);
             break;
     }
     
@@ -103,7 +107,6 @@ function precargarProgramas() {
 }
 */
 
-// Actualizar visualización de memoria
 function actualizarVisualizacionMemoria() {
     if (!memoriaManager) return;
     
@@ -126,7 +129,15 @@ function actualizarVisualizacionMemoria() {
             div.textContent = 'SO';
         } else if (particion.estado) {
             div.className = 'bloque proceso';
-            div.textContent = `${particion.proceso.nombreProceso}\n${particion.proceso.tamañoProceso} KiB`;
+            
+            // MOSTRAR INFORMACIÓN DEL SEGMENTO - CORREGIDO
+            if (particion.segmento) {
+                // Para segmentación: mostrar proceso + segmento + tamaño del segmento
+                div.textContent = `${particion.proceso.nombreProceso}\n${particion.segmento.nombre}\n${particion.tamañoParticion} KiB`;
+            } else {
+                // Para particiones normales: mostrar proceso + tamaño de la partición
+                div.textContent = `${particion.proceso.nombreProceso}\n${particion.proceso.tamañoProceso} KiB`;
+            }
         } else {
             div.className = 'bloque libre';
             div.textContent = 'Libre';
@@ -327,16 +338,6 @@ function abrirVentanaSegmentos(programa) {
     // Limpia la lista anterior
     lista.innerHTML = "";
 
-    if (!programa.segmentos) {
-        programa.segmentos = [
-            { nombre: "BSS", tamaño: Math.floor(programa.tamano * 0.1) },
-            { nombre: "Código", tamaño: Math.floor(programa.tamano * 0.3) },
-            { nombre: "Datos", tamaño: Math.floor(programa.tamano * 0.2) },
-            { nombre: "Heap", tamaño: 64 },
-            { nombre: "Stack", tamaño: 128 },
-        ];
-    }
-
     // Crea los campos para modificar los tamaños
     programa.segmentos.forEach((seg, index) => {
         const divSeg = document.createElement("div");
@@ -437,7 +438,8 @@ function inicializarEventListeners() {
                 'btn-particion-fija': 'Estática de tamaño fijo',
                 'btn-particion-variable': 'Estática de tamaño variable',
                 'btn-particion-dinamica-sin': 'Dinámica (sin compactación)',
-                'btn-particion-dinamica-con': 'Dinámica (con compactación)'
+                'btn-particion-dinamica-con': 'Dinámica (con compactación)',
+                'btn-particion-segmentada': 'Segmentación Pura'
             };
 
             particionElegida = map[btn.id];
