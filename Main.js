@@ -295,17 +295,21 @@ function actualizarListaEliminacion() {
 }
 
 function inicializarBotonesProcesos() {
-    PROGRAMAS_PREDEFINIDOS.forEach(programa => {
-        const nuevoLi = document.createElement("li");
-        const botonProceso = document.createElement('button');
-        botonProceso.textContent = programa.nombre;
-        
-        botonProceso.addEventListener('click', function() {
-            asignarProceso(programa);
-        });
-        nuevoLi.appendChild(botonProceso);
-        menuProcesosPredeterminados.appendChild(nuevoLi);
-    });
+  PROGRAMAS_PREDEFINIDOS.forEach(programa => {
+    const nuevoLi = document.createElement("li");
+
+    const botonProceso = document.createElement('button');
+    botonProceso.textContent = programa.nombre;
+    botonProceso.addEventListener('click', () => asignarProceso(programa));
+
+    const botonSegmentos = document.createElement('button');
+    botonSegmentos.textContent = "Editar segmentos";
+    botonSegmentos.addEventListener('click', () => abrirVentanaSegmentos(programa));
+
+    nuevoLi.appendChild(botonProceso);
+    nuevoLi.appendChild(botonSegmentos);
+    menuProcesosPredeterminados.appendChild(nuevoLi);
+  });
 }
 
 // Event Listeners

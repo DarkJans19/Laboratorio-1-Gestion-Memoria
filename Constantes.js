@@ -3,6 +3,8 @@ const MEMORIA_TOTAL_MiB = 16;
 const TAMANO_PARTICION_MiB = 1;
 const TAMANO_PARTICION_KiB = TAMANO_PARTICION_MiB * 1024;
 const MEMORIA_TOTAL_KiB = MEMORIA_TOTAL_MiB * 1024; // 16 MiB
+const heap = 64 // KiB
+const stack = 128 // KiB
 
 const PROGRAMAS_PREDEFINIDOS = [
     { nombre: "Notepad", tamano: 225 },
