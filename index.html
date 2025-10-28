@@ -73,11 +73,12 @@
     </div>
   </div>
 
-<div id="ventana-procesos" class="ventana">
+<div id="ventana-segmentos" class="ventana-modal" style="display:none;">
   <div class="ventana-contenido">
-    <h2>Seleccionar Proceso Predefinido</h2>
-    <ul id="menu-procesos-predeterminados"></ul>
-    <button id="cerrar-proceso">Cerrar</button>
+    <h2 id="titulo-segmentos">Segmentos</h2>
+    <div id="lista-segmentos"></div>
+    <button id="guardar-segmentos">Guardar</button>
+    <button onclick="document.getElementById('ventana-segmentos').style.display='none'">Cerrar</button>
   </div>
 </div>
 
@@ -131,8 +132,9 @@
   <script type="module" src="Memoria/MemoriaEstaticaVariable.js"></script>
   <script type="module" src="Memoria/MemoriaDinamicaSinCompactacion.js"></script>
   <script type="module" src="Memoria/MemoriaDinamicaConCompactacion.js"></script>
+  <script src = "Constantes.js"></script>
   <script type="module" src="Main.js"></script>
   <script src="Dom-References.js"></script>
-  <script src="Constantes.js"></script>
+
 </body>
 </html>

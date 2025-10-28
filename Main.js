@@ -79,6 +79,7 @@ function inicializarMemoriaConSO() {
 }
 
 // Precargar programas predefinidos
+/*
 function precargarProgramas() {
     if (!memoriaManager) return;
     
@@ -100,6 +101,7 @@ function precargarProgramas() {
     
     refrescarVista();
 }
+*/
 
 // Actualizar visualización de memoria
 function actualizarVisualizacionMemoria() {
@@ -294,23 +296,81 @@ function actualizarListaEliminacion() {
     }
 }
 
+// Botones dinamicos
+
 function inicializarBotonesProcesos() {
-  PROGRAMAS_PREDEFINIDOS.forEach(programa => {
-    const nuevoLi = document.createElement("li");
+    PROGRAMAS_PREDEFINIDOS.forEach(programa => {
+        const nuevoLi = document.createElement("li");
 
-    const botonProceso = document.createElement('button');
-    botonProceso.textContent = programa.nombre;
-    botonProceso.addEventListener('click', () => asignarProceso(programa));
+        const botonProceso = document.createElement('button');
+        botonProceso.textContent = programa.nombre;
+        botonProceso.addEventListener('click', () => asignarProceso(programa));
 
-    const botonSegmentos = document.createElement('button');
-    botonSegmentos.textContent = "Editar segmentos";
-    botonSegmentos.addEventListener('click', () => abrirVentanaSegmentos(programa));
+        const botonSegmentos = document.createElement('button');
+        botonSegmentos.textContent = "Editar segmentos";
+        botonSegmentos.addEventListener('click', () => abrirVentanaSegmentos(programa));
 
-    nuevoLi.appendChild(botonProceso);
-    nuevoLi.appendChild(botonSegmentos);
-    menuProcesosPredeterminados.appendChild(nuevoLi);
-  });
+        nuevoLi.appendChild(botonProceso);
+        nuevoLi.appendChild(botonSegmentos);
+        menuProcesosPredeterminados.appendChild(nuevoLi);
+    });
 }
+
+function abrirVentanaSegmentos(programa) {
+    const modal = document.getElementById("ventana-segmentos");
+    const lista = document.getElementById("lista-segmentos");
+    const titulo = document.getElementById("titulo-segmentos");
+
+    // Actualiza el título
+    titulo.textContent = `Segmentos de ${programa.nombre}`;
+
+    // Limpia la lista anterior
+    lista.innerHTML = "";
+
+    if (!programa.segmentos) {
+        programa.segmentos = [
+            { nombre: "BSS", tamaño: Math.floor(programa.tamano * 0.1) },
+            { nombre: "Código", tamaño: Math.floor(programa.tamano * 0.3) },
+            { nombre: "Datos", tamaño: Math.floor(programa.tamano * 0.2) },
+            { nombre: "Heap", tamaño: 64 },
+            { nombre: "Stack", tamaño: 128 },
+        ];
+    }
+
+    // Crea los campos para modificar los tamaños
+    programa.segmentos.forEach((seg, index) => {
+        const divSeg = document.createElement("div");
+        divSeg.classList.add("segmento-item");
+
+        divSeg.innerHTML = `
+        <label>${seg.nombre}:</label>
+        <input type="number" value="${seg.tamaño}" id="seg-${index}" min="1">
+        `;
+
+        lista.appendChild(divSeg);
+    });
+
+    // Muestra la ventana
+    modal.style.display = "block";
+
+    // Botón guardar
+    const botonGuardar = document.getElementById("guardar-segmentos");
+    botonGuardar.onclick = function() {
+        let total = 0;
+        programa.segmentos.forEach((seg, index) => {
+        const nuevoTam = parseInt(document.getElementById(`seg-${index}`).value);
+        seg.tamaño = nuevoTam;
+        total += nuevoTam;
+        });
+
+        // Actualiza el tamaño total del programa según los segmentos
+        programa.tamano = total;
+
+        alert(`Segmentos actualizados para ${programa.nombre}. Tamaño total: ${total} KiB`);
+        modal.style.display = "none";
+    };
+}
+
 
 // Event Listeners
 function inicializarEventListeners() {
