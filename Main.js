@@ -94,9 +94,30 @@ function actualizarVisualizacionMemoria() {
     etiquetasMemoria.innerHTML = '';
     etiquetasHex.innerHTML = '';
 
-    memoriaManager.particiones.forEach((particion) => {
+    // Calcular altura dinámica basada en el número de particiones
+    const totalParticiones = memoriaManager.particiones.length;
+    const alturaMaximaContenedor = 600; // altura máxima del contenedor en px
+    const alturaMinimaBloque = 20; // altura mínima de cada bloque en px
+    const alturaTotalNecesaria = totalParticiones * alturaMinimaBloque;
+    
+    // Ajustar altura del contenedor si es necesario
+    if (alturaTotalNecesaria > alturaMaximaContenedor) {
+        memoriaBox.style.height = `${alturaTotalNecesaria}px`;
+    } else {
+        memoriaBox.style.height = `${alturaMaximaContenedor}px`;
+    }
+
+    // Calcular altura proporcional para cada bloque
+    const alturaBloque = Math.max(
+        alturaMinimaBloque,
+        memoriaBox.clientHeight / totalParticiones
+    );
+
+    memoriaManager.particiones.forEach((particion, index) => {
         // Crear bloque de memoria
         const div = document.createElement('div');
+        div.style.height = `${alturaBloque}px`;
+        div.style.minHeight = `${alturaMinimaBloque}px`;
         
         // Determinar clase CSS según el tipo de bloque
         if (particion.proceso && particion.proceso.nombreProceso === 'SO') {
@@ -105,33 +126,61 @@ function actualizarVisualizacionMemoria() {
         } else if (particion.estado) {
             div.className = 'bloque proceso';
             
-            // MOSTRAR INFORMACIÓN DEL SEGMENTO - CORREGIDO
+            // MOSTRAR INFORMACIÓN DEL SEGMENTO
             if (particion.segmento) {
-                // Para segmentación: mostrar proceso + segmento + tamaño del segmento
-                div.textContent = `${particion.proceso.nombreProceso}\n${particion.segmento.nombre}\n${particion.tamañoParticion} KiB`;
+                // Para segmentación: mostrar proceso + segmento + tamaño
+                div.innerHTML = `
+                    <div style="font-size: ${Math.max(10, alturaBloque/5)}px; line-height: 1.2;">
+                        <strong>${particion.proceso.nombreProceso}</strong><br>
+                        ${particion.segmento.nombre}<br>
+                        ${particion.tamañoParticion} KiB
+                    </div>
+                `;
             } else {
-                // Para particiones normales: mostrar proceso + tamaño de la partición
-                div.textContent = `${particion.proceso.nombreProceso}\n${particion.proceso.tamañoProceso} KiB`;
+                // Para particiones normales
+                div.innerHTML = `
+                    <div style="font-size: ${Math.max(10, alturaBloque/5)}px; line-height: 1.2;">
+                        <strong>${particion.proceso.nombreProceso}</strong><br>
+                        ${particion.proceso.tamañoProceso} KiB
+                    </div>
+                `;
             }
         } else {
             div.className = 'bloque libre';
-            div.textContent = 'Libre';
+            div.innerHTML = `
+                <div style="font-size: ${Math.max(10, alturaBloque/5)}px;">
+                    Libre<br>${particion.tamañoParticion} KiB
+                </div>
+            `;
         }
+        
+        // Añadir tooltip con información detallada
+        div.title = `Dirección: 0x${(particion.direccionInicio * 1024).toString(16).toUpperCase()}\nTamaño: ${particion.tamañoParticion} KiB\n${particion.segmento ? `Segmento: ${particion.segmento.nombre}` : ''}`;
         
         memoriaBox.appendChild(div);
 
         // Crear etiqueta de tamaño
         const etiqueta = document.createElement('div');
         etiqueta.className = 'etiqueta-bloque';
+        etiqueta.style.height = `${alturaBloque}px`;
+        etiqueta.style.minHeight = `${alturaMinimaBloque}px`;
+        etiqueta.style.fontSize = `${Math.max(8, alturaBloque/6)}px`;
         etiqueta.textContent = `${particion.tamañoParticion} KiB`;
         etiquetasMemoria.appendChild(etiqueta);
 
         // Crear etiqueta hexadecimal
         const etiquetaHex = document.createElement('div');
         etiquetaHex.className = 'etiqueta-hex';
+        etiquetaHex.style.height = `${alturaBloque}px`;
+        etiquetaHex.style.minHeight = `${alturaMinimaBloque}px`;
+        etiquetaHex.style.fontSize = `${Math.max(8, alturaBloque/6)}px`;
         etiquetaHex.textContent = `0x${(particion.direccionInicio * 1024).toString(16).toUpperCase()}`;
         etiquetasHex.appendChild(etiquetaHex);
     });
+
+    // Ajustar también las alturas de los contenedores de etiquetas
+    etiquetasMemoria.style.height = `${memoriaBox.style.height}`;
+    etiquetasHex.style.height = `${memoriaBox.style.height}`;
 }
 
 // Actualizar lista de procesos

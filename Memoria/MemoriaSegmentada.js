@@ -14,8 +14,34 @@ export class MemoriaSegmentada extends Memoria {
     }
 
     añadirProceso(proceso) {
-        console.log("Asignando proceso con segmentación:", proceso.nombreProceso);
+        console.log("Asignando proceso:", proceso.nombreProceso);
         
+        // CASO ESPECIAL: El Sistema Operativo NO se segmenta
+        if (proceso.nombreProceso === 'SO') {
+            console.log("Asignando SO como proceso contiguo (sin segmentación)");
+            return this.añadirProcesoContiguo(proceso);
+        }
+        
+        // CASO NORMAL: Procesos de usuario SÍ se segmentan
+        console.log("Asignando proceso de usuario con segmentación:", proceso.nombreProceso);
+        return this.añadirProcesoSegmentado(proceso);
+    }
+
+    // Método para asignar procesos de forma contigua (SO)
+    añadirProcesoContiguo(proceso) {
+        const hueco = this.estrategiaAlgoritmo.buscarHueco(this.particiones, proceso);
+        if (!hueco) return false;
+        
+        const indiceHueco = this.particiones.indexOf(hueco);
+        const division = this.calcularLimites(hueco, proceso);
+        const nuevasParticiones = this.crearParticionesContiguas(division, proceso);
+        
+        this.particiones.splice(indiceHueco, 1, ...nuevasParticiones);
+        return true;
+    }
+
+    // Método para asignar procesos segmentados (usuarios)
+    añadirProcesoSegmentado(proceso) {
         // Verificar si hay espacio suficiente para TODOS los segmentos
         const espacioTotalNecesario = proceso.tablaSegmentos.reduce((total, seg) => total + seg.tamaño, 0);
         const espacioTotalLibre = this.particiones
@@ -40,7 +66,7 @@ export class MemoriaSegmentada extends Memoria {
                 // Asignar este segmento
                 const indiceHueco = this.particiones.indexOf(hueco);
                 const division = this.calcularLimites(hueco, { tamañoProceso: segmento.tamaño });
-                const nuevasParticiones = this.crearParticiones(division, proceso, segmento);
+                const nuevasParticiones = this.crearParticionesSegmentadas(division, proceso, segmento);
                 
                 this.particiones.splice(indiceHueco, 1, ...nuevasParticiones);
                 
@@ -70,6 +96,60 @@ export class MemoriaSegmentada extends Memoria {
         }
     }
 
+    // Crear particiones para procesos contiguos (SO)
+    crearParticionesContiguas(division, proceso) {
+        const particionProceso = new Particion(
+            proceso, 
+            true, 
+            proceso.tamañoProceso, 
+            division.inicioProceso, 
+            division.finalProceso
+        );
+        
+        // NO asignar segmento para el SO
+        particionProceso.segmento = null;
+        
+        if (division.tamañoLibre > 0) {
+            const particionLibre = new Particion(
+                null, 
+                false, 
+                division.tamañoLibre, 
+                division.inicioLibre, 
+                division.finalLibre
+            );
+            return [particionProceso, particionLibre];
+        } else {
+            return [particionProceso];
+        }
+    }
+
+    // Crear particiones para procesos segmentados (usuarios)
+    crearParticionesSegmentadas(division, proceso, segmento) {
+        const particionProceso = new Particion(
+            proceso, 
+            true, 
+            segmento.tamaño, 
+            division.inicioProceso, 
+            division.finalProceso
+        );
+        
+        // Guardar referencia al segmento en la partición (solo para usuarios)
+        particionProceso.segmento = segmento;
+        
+        if (division.tamañoLibre > 0) {
+            const particionLibre = new Particion(
+                null, 
+                false, 
+                division.tamañoLibre, 
+                division.inicioLibre, 
+                division.finalLibre
+            );
+            return [particionProceso, particionLibre];
+        } else {
+            return [particionProceso];
+        }
+    }
+
     desasignarSegmentos(segmentos) {
         segmentos.forEach(segmento => {
             if (segmento.particionAsignada) {
@@ -95,7 +175,7 @@ export class MemoriaSegmentada extends Memoria {
         
         // Liberar todas las particiones del proceso
         particionesProceso.forEach(particion => {
-            // Limpiar referencia en la tabla de segmentos
+            // Limpiar referencia en la tabla de segmentos (solo para procesos segmentados)
             if (particion.segmento) {
                 particion.segmento.direccionFisica = null;
                 particion.segmento.particionAsignada = null;
@@ -111,11 +191,14 @@ export class MemoriaSegmentada extends Memoria {
         return procesoEliminado;
     }
 
-    calcularLimites(hueco, segmento) {
+    calcularLimites(hueco, procesoOSegmento) {
+        // Manejar tanto procesos completos como segmentos individuales
+        const tamañoNecesario = procesoOSegmento.tamañoProceso || procesoOSegmento.tamaño;
+        
         const inicioProceso = hueco.direccionInicio;
-        const finalProceso = inicioProceso + segmento.tamañoProceso - 1;
+        const finalProceso = inicioProceso + tamañoNecesario - 1;
         const inicioLibre = finalProceso + 1;
-        const tamañoLibre = hueco.tamañoParticion - segmento.tamañoProceso;
+        const tamañoLibre = hueco.tamañoParticion - tamañoNecesario;
         
         return {
             inicioProceso,
@@ -124,32 +207,6 @@ export class MemoriaSegmentada extends Memoria {
             tamañoLibre,
             finalLibre: hueco.direccionFinal
         };
-    }
-
-    crearParticiones(division, proceso, segmento) {
-        const particionProceso = new Particion(
-            proceso, 
-            true, 
-            segmento.tamaño, 
-            division.inicioProceso, 
-            division.finalProceso
-        );
-        
-        // Guardar referencia al segmento en la partición
-        particionProceso.segmento = segmento;
-        
-        if (division.tamañoLibre > 0) {
-            const particionLibre = new Particion(
-                null, 
-                false, 
-                division.tamañoLibre, 
-                division.inicioLibre, 
-                division.finalLibre
-            );
-            return [particionProceso, particionLibre];
-        } else {
-            return [particionProceso];
-        }
     }
 
     fusionarParticion() {

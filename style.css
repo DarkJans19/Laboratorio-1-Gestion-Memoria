@@ -369,3 +369,40 @@ body {
   background: linear-gradient(135deg, #ff9800, #f57c00);
   color: white;
 }
+
+.memoria-box {
+    width: 400px;
+    min-height: 600px;
+    display: flex;
+    flex-direction: column;
+    border: 3px solid #333;
+    border-radius: 8px;
+    overflow-y: auto; /* Cambiado de hidden a auto */
+    overflow-x: hidden;
+    background: #fff;
+    transition: height 0.3s ease;
+}
+
+/* Asegurar que el contenedor principal también permita scroll */
+.memoria-contenedor {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    order: 1;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* Las etiquetas también deben scroll sincronizado */
+.etiquetas-memoria, .etiquetas-hex {
+    display: flex;
+    flex-direction: column;
+    width: 120px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+    text-align: right;
+    padding: 5px 0;
+    overflow-y: auto;
+    max-height: 80vh;
+}
