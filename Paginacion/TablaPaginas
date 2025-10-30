@@ -1,0 +1,72 @@
+export class TablaPaginas {
+    constructor(proceso, tamañoPagina = 512) {
+        this.proceso = proceso;
+        this.tamañoPagina = tamañoPagina;
+        this.paginas = [];
+        this.fragmentacionInterna = 0; 
+        this.inicializarPaginas();
+    }
+
+    inicializarPaginas() {
+        const numPaginas = Math.ceil(this.proceso.tamañoProceso / this.tamañoPagina);
+        
+        this.paginas = [];
+        this.fragmentacionInterna = 0;
+        
+        for (let i = 0; i < numPaginas; i++) {
+            let tamañoReal;
+            
+            if (i === numPaginas - 1) {
+                tamañoReal = this.proceso.tamañoProceso - (i * this.tamañoPagina);
+                
+                // Calcular fragmentación interna
+                if (tamañoReal < this.tamañoPagina) {
+                    this.fragmentacionInterna += (this.tamañoPagina - tamañoReal);
+                }
+            } else {
+                tamañoReal = this.tamañoPagina;
+            }
+            
+            this.paginas.push(new Pagina(i, this.proceso, this.tamañoPagina, tamañoReal));
+        }
+    }
+
+    // Buscar páginas no cargadas
+    obtenerPaginasNoCargadas() {
+        return this.paginas.filter(pagina => !pagina.cargada);
+    }
+
+    traducirDireccion(direccionLogica) {
+        const numPagina = Math.floor(direccionLogica / this.tamañoPagina);
+        const desplazamiento = direccionLogica % this.tamañoPagina;
+        
+        if (numPagina >= this.paginas.length) {
+            throw new Error(`Dirección lógica 0x${direccionLogica.toString(16)} fuera de rango`);
+        }
+        
+        const pagina = this.paginas[numPagina];
+        
+        if (!pagina.cargada || !pagina.marcoAsignado) {
+            throw new Error(`Página ${numPagina} no cargada en memoria`);
+        }
+        
+        const direccionFisica = (pagina.marcoAsignado.id * this.tamañoPagina) + desplazamiento;
+        
+        return direccionFisica;
+    }
+
+    obtenerInformacion() {
+        return {
+            proceso: this.proceso.nombreProceso,
+            totalPaginas: this.paginas.length,
+            tamañoPagina: this.tamañoPagina,
+            fragmentacionInterna: this.fragmentacionInterna,
+            paginasCargadas: this.paginas.filter(p => p.cargada).length,
+            paginasNoCargadas: this.obtenerPaginasNoCargadas().length
+        };
+    }
+
+    liberarTodasLasPaginas() {
+        this.paginas.forEach(pagina => pagina.liberarMarco());
+    }
+}

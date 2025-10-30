@@ -9,6 +9,7 @@ import { MemoriaSegmentada } from './Memoria/MemoriaSegmentada.js';
 import { Proceso } from './Proceso/Proceso.js';
 import { MemoriaPaginada } from './Memoria/MemoriaPaginada.js';
 
+
 // Variables globales
 let memoriaManager = null;
 let particionElegida = null;
@@ -22,6 +23,30 @@ document.addEventListener('DOMContentLoaded', function() {
     mostrarInformacionMemoria();
     inicializarBotonesProcesos();
 });
+
+function mostrarInformacionMemoria() {
+    const infoBox = document.getElementById('info-memoria');
+    if (!infoBox) return;
+    
+    if (!memoriaManager) {
+        infoBox.innerHTML = 'Selecciona partición y algoritmo';
+        return;
+    }
+    
+    let info = `
+        <p><strong>Tipo de Memoria:</strong> ${particionElegida || 'No definida'}</p>
+        <p><strong>Algoritmo:</strong> ${algoritmoElegido || 'No definido'}</p>
+        <p><strong>Memoria Total:</strong> ${MEMORIA_TOTAL_KiB} KiB</p>
+    `;
+    
+    if (memoriaManager.marcos) {
+        const marcosLibres = memoriaManager.marcos.filter(m => !m.ocupado).length;
+        const marcosTotales = memoriaManager.marcos.length;
+        info += `<p><strong>Marcos:</strong> ${marcosLibres}/${marcosTotales} libres</p>`;
+    }
+    
+    infoBox.innerHTML = info;
+}
 
 // 2. FUNCIÓN FALTANTE - actualizarListaProcesos()
 function actualizarListaProcesos() {
@@ -91,7 +116,6 @@ function inicializarMemoria() {
     }
 }
 
-// FUNCIÓN UNIFICADA: Inicializar SO según tipo de memoria
 function inicializarMemoriaConSO() {
     if (!memoriaManager) return;
     
@@ -99,20 +123,44 @@ function inicializarMemoriaConSO() {
     
     // Para paginación (ya tiene SO en los primeros 4 marcos)
     if (particionElegida === 'Paginación') {
-        return; // Ya está hecho en MemoriaPaginada.inicializarMemoria()
+        // Ya está hecho en MemoriaPaginada.inicializarMemoria()
+        return;
     }
     
     // Para memorias estáticas
     if (particionElegida.includes('Estática') && memoriaManager.particiones.length > 0) {
         memoriaManager.particiones[0].añadirProceso(procesoSO);
     } 
-    // Para memoria dinámica y segmentación
+    // Para memoria dinámica
     else {
         memoriaManager.añadirProceso(procesoSO);
     }
 }
 
-// FUNCIÓN UNIFICADA: Visualización de memoria
+// Precargar programas predefinidos
+/*
+function precargarProgramas() {
+    if (!memoriaManager) return;
+    
+    let programasAsignados = 0;
+    
+    PROGRAMAS_PREDEFINIDOS.forEach(programa => {
+        if (programasAsignados < 5) {
+            const proceso = new Proceso(proximoPID++, programa.nombre, programa.tamano);
+            
+            try {
+                memoriaManager.añadirProceso(proceso);
+                procesos.push(`${programa.nombre} (${programa.tamano} KiB)`);
+                programasAsignados++;
+            } catch (error) {
+                console.log(`No se pudo asignar ${programa.nombre}: ${error.message}`);
+            }
+        }
+    });
+    
+    refrescarVista();
+}
+*/
 function actualizarVisualizacionMemoria() {
     if (!memoriaManager) return;
     
@@ -124,18 +172,6 @@ function actualizarVisualizacionMemoria() {
     etiquetasMemoria.innerHTML = '';
     etiquetasHex.innerHTML = '';
 
-    // DETECTAR TIPO DE MEMORIA
-    if (memoriaManager.marcos) {
-        // PAGINACIÓN: Visualizar marcos
-        visualizarPaginacion(memoriaBox, etiquetasMemoria, etiquetasHex);
-    } else if (memoriaManager.particiones) {
-        // SEGMENTACIÓN Y OTROS: Visualizar particiones
-        visualizarSegmentacion(memoriaBox, etiquetasMemoria, etiquetasHex);
-    }
-}
-
-// Visualización para PAGINACIÓN
-function visualizarPaginacion(memoriaBox, etiquetasMemoria, etiquetasHex) {
     memoriaManager.marcos.forEach((marco) => {
         const div = document.createElement('div');
         
@@ -147,6 +183,8 @@ function visualizarPaginacion(memoriaBox, etiquetasMemoria, etiquetasHex) {
             div.textContent = 'SO';
         } else if (estaOcupado && marco.proceso) {
             div.className = 'bloque proceso';
+            
+            // En paginación, mostrar: Proceso - Marco - Página
             const pagNum = marco.pagina?.id ?? '?';
             div.textContent = `${marco.proceso.nombreProceso}\nMarco${marco.id}\nPág${pagNum}`;
         } else {
@@ -170,136 +208,7 @@ function visualizarPaginacion(memoriaBox, etiquetasMemoria, etiquetasHex) {
     });
 }
 
-// Visualización para SEGMENTACIÓN
-function visualizarSegmentacion(memoriaBox, etiquetasMemoria, etiquetasHex) {
-    const totalParticiones = memoriaManager.particiones.length;
-    const alturaMaximaContenedor = 600;
-    const alturaMinimaBloque = 20;
-    const alturaTotalNecesaria = totalParticiones * alturaMinimaBloque;
-    
-    if (alturaTotalNecesaria > alturaMaximaContenedor) {
-        memoriaBox.style.height = `${alturaTotalNecesaria}px`;
-    } else {
-        memoriaBox.style.height = `${alturaMaximaContenedor}px`;
-    }
-
-    const alturaBloque = Math.max(alturaMinimaBloque, memoriaBox.clientHeight / totalParticiones);
-
-    memoriaManager.particiones.forEach((particion) => {
-        const div = document.createElement('div');
-        div.style.height = `${alturaBloque}px`;
-        div.style.minHeight = `${alturaMinimaBloque}px`;
-        
-        if (particion.proceso && particion.proceso.nombreProceso === 'SO') {
-            div.className = 'bloque so';
-            div.textContent = 'SO';
-        } else if (particion.estado) {
-            div.className = 'bloque proceso';
-            if (particion.segmento) {
-                div.innerHTML = `
-                    <div style="font-size: ${Math.max(10, alturaBloque/5)}px; line-height: 1.2;">
-                        <strong>${particion.proceso.nombreProceso}</strong><br>
-                        ${particion.segmento.nombre}<br>
-                        ${particion.tamañoParticion} KiB
-                    </div>
-                `;
-            } else {
-                div.innerHTML = `
-                    <div style="font-size: ${Math.max(10, alturaBloque/5)}px; line-height: 1.2;">
-                        <strong>${particion.proceso.nombreProceso}</strong><br>
-                        ${particion.proceso.tamañoProceso} KiB
-                    </div>
-                `;
-            }
-        } else {
-            div.className = 'bloque libre';
-            div.innerHTML = `
-                <div style="font-size: ${Math.max(10, alturaBloque/5)}px;">
-                    Libre<br>${particion.tamañoParticion} KiB
-                </div>
-            `;
-        }
-        
-        div.title = `Dirección: 0x${(particion.direccionInicio * 1024).toString(16).toUpperCase()}\nTamaño: ${particion.tamañoParticion} KiB\n${particion.segmento ? `Segmento: ${particion.segmento.nombre}` : ''}`;
-        
-        memoriaBox.appendChild(div);
-
-        // Etiquetas
-        const etiqueta = document.createElement('div');
-        etiqueta.className = 'etiqueta-bloque';
-        etiqueta.style.height = `${alturaBloque}px`;
-        etiqueta.style.minHeight = `${alturaMinimaBloque}px`;
-        etiqueta.style.fontSize = `${Math.max(8, alturaBloque/6)}px`;
-        etiqueta.textContent = `${particion.tamañoParticion} KiB`;
-        etiquetasMemoria.appendChild(etiqueta);
-
-        const etiquetaHex = document.createElement('div');
-        etiquetaHex.className = 'etiqueta-hex';
-        etiquetaHex.style.height = `${alturaBloque}px`;
-        etiquetaHex.style.minHeight = `${alturaMinimaBloque}px`;
-        etiquetaHex.style.fontSize = `${Math.max(8, alturaBloque/6)}px`;
-        etiquetaHex.textContent = `0x${(particion.direccionInicio * 1024).toString(16).toUpperCase()}`;
-        etiquetasHex.appendChild(etiquetaHex);
-    });
-
-    etiquetasMemoria.style.height = `${memoriaBox.style.height}`;
-    etiquetasHex.style.height = `${memoriaBox.style.height}`;
-}
-
-// FUNCIÓN UNIFICADA: Mostrar información de memoria
-function mostrarInformacionMemoria() {
-    const infoEleccion = document.querySelector('.info-eleccion');
-    
-    if (!memoriaManager) {
-        infoEleccion.innerHTML = `
-            <ul>
-                <li>Particiones libres: —</li>
-                <li>Memoria usada: —</li>
-                <li>Fragmentación interna: —</li>
-            </ul>
-        `;
-        return;
-    }
-
-    let html = '';
-    
-    if (memoriaManager.marcos) {
-        // PAGINACIÓN
-        const marcosLibres = memoriaManager.marcos.filter(m => !m.ocupado).length;
-        const marcosTotales = memoriaManager.marcos.length;
-        const memoriaUsada = memoriaManager.marcos.filter(m => m.ocupado).length * (memoriaManager.marcos[0]?.tamañoMarco || 0);
-        
-        html = `
-            <ul>
-                <li>Marcos libres: ${marcosLibres}/${marcosTotales}</li>
-                <li>Memoria usada: ${memoriaUsada} KiB</li>
-                <li>Tamaño marco: ${memoriaManager.marcos[0]?.tamañoMarco || 0} KiB</li>
-            </ul>
-        `;
-    } else {
-        // SEGMENTACIÓN Y OTROS
-        const particionesLibres = memoriaManager.particiones.filter(p => !p.estado).length;
-        const memoriaUsada = memoriaManager.particiones
-            .filter(p => p.estado)
-            .reduce((total, p) => total + (p.proceso?.tamañoProceso || 0), 0);
-        
-        const fragmentacionInterna = memoriaManager.particiones
-            .filter(p => p.estado)
-            .reduce((total, p) => total + (p.tamañoParticion - p.proceso.tamañoProceso), 0);
-
-        html = `
-            <ul>
-                <li>Particiones libres: ${particionesLibres}</li>
-                <li>Memoria usada: ${memoriaUsada} KiB</li>
-                <li>Fragmentación interna: ${fragmentacionInterna} KiB</li>
-            </ul>
-        `;
-    }
-    
-    infoEleccion.innerHTML = html;
-}
-
-// FUNCIÓN UNIFICADA: Asignar proceso
+// Asignar proceso
 function asignarProceso(procesoData) {
     if (!memoriaManager) {
         alert("Primero selecciona tipo de partición y algoritmo");
@@ -308,17 +217,6 @@ function asignarProceso(procesoData) {
     
     try {
         const proceso = new Proceso(proximoPID++, procesoData.nombre, procesoData.tamano);
-        
-        // Solo aplicar segmentos si es segmentación
-        if (particionElegida === 'Segmentación Pura' && procesoData.segmentosConfig) {
-            proceso.tablaSegmentos.forEach((seg, index) => {
-                if (procesoData.segmentosConfig[index]) {
-                    seg.tamaño = procesoData.segmentosConfig[index].tamaño;
-                }
-            });
-            proceso._tamañoProceso = proceso.tablaSegmentos.reduce((total, seg) => total + seg.tamaño, 0);
-        }
-        
         memoriaManager.añadirProceso(proceso);
         procesos.push(`${procesoData.nombre} (${procesoData.tamano} KiB)`);
         refrescarVista();
@@ -329,7 +227,7 @@ function asignarProceso(procesoData) {
     }
 }
 
-// FUNCIÓN UNIFICADA: Eliminar proceso
+// Eliminar proceso
 function eliminarProceso(pid) {
     if (!memoriaManager) {
         alert("Primero selecciona tipo de partición");
@@ -339,17 +237,15 @@ function eliminarProceso(pid) {
     const resultado = memoriaManager.eliminarProceso(pid);
     
     if (resultado) {
-        // Filtrar procesos por PID
+        // Filtrar procesos por el nombre (no por PID en la lista)
+        // La lista de procesos guarda el nombre y tamaño
         procesos = procesos.filter(p => {
+            // Obtener el nombre del proceso de la cadena
             const nombreProceso = p.split(' (')[0];
+            // Buscar en memoriaManager si este proceso tiene ese PID
             if (memoriaManager.marcos) {
                 const procesoEliminado = memoriaManager.marcos.find(
                     m => m.proceso && m.proceso.PID === pid && m.proceso.nombreProceso === nombreProceso
-                );
-                return !procesoEliminado;
-            } else if (memoriaManager.particiones) {
-                const procesoEliminado = memoriaManager.particiones.find(
-                    p => p.proceso && p.proceso.PID === pid && p.proceso.nombreProceso === nombreProceso
                 );
                 return !procesoEliminado;
             }
@@ -363,91 +259,6 @@ function eliminarProceso(pid) {
     }
     
     return resultado;
-}
-
-// FUNCIÓN UNIFICADA: Actualizar lista para eliminación
-function actualizarListaEliminacion() {
-    const select = document.getElementById("proceso-eliminar");
-    select.innerHTML = '';
-
-    if (!memoriaManager) {
-        select.innerHTML = '<option value="">No hay procesos</option>';
-        return;
-    }
-
-    const procesosActivos = new Map();
-    
-    if (memoriaManager.marcos) {
-        // PAGINACIÓN
-        memoriaManager.marcos.forEach(marco => {
-            if (marco.ocupado && marco.proceso && marco.proceso.nombreProceso !== 'SO') {
-                const pid = marco.proceso.PID;
-                if (!procesosActivos.has(pid)) {
-                    procesosActivos.set(pid, marco.proceso);
-                }
-            }
-        });
-    } else if (memoriaManager.particiones) {
-        // SEGMENTACIÓN
-        memoriaManager.particiones.forEach(particion => {
-            if (particion.estado && particion.proceso && particion.proceso.nombreProceso !== 'SO') {
-                const pid = particion.proceso.PID;
-                if (!procesosActivos.has(pid)) {
-                    procesosActivos.set(pid, particion.proceso);
-                }
-            }
-        });
-    }
-
-    if (procesosActivos.size === 0) {
-        select.innerHTML = '<option value="">No hay procesos para eliminar</option>';
-    } else {
-        procesosActivos.forEach((proceso, pid) => {
-            const option = document.createElement('option');
-            option.value = pid;
-            option.textContent = `${proceso.nombreProceso} (PID: ${pid}, ${proceso.tamañoProceso} KiB)`;
-            select.appendChild(option);
-        });
-    }
-}
-
-// FUNCIÓN UNIFICADA: Mostrar tabla de proceso
-function mostrarTablaProceso(pid) {
-    const proceso = encontrarProcesoPorPID(pid);
-    if (!proceso) return;
-    
-    document.getElementById('info-proceso-tabla').style.display = 'block';
-    document.getElementById('nombre-proceso-tabla').textContent = proceso.nombreProceso;
-    document.getElementById('pid-proceso-tabla').textContent = proceso.PID;
-    document.getElementById('tamano-proceso-tabla').textContent = proceso.tamañoProceso + ' KiB';
-    
-    // DIFERENCIADO POR TIPO DE MEMORIA
-    if (particionElegida === 'Paginación') {
-        mostrarTablaPaginasProceso(pid);
-    } else if (particionElegida === 'Segmentación Pura') {
-        mostrarTablaSegmentos(proceso);
-        mostrarMapaMemoriaProceso(proceso);
-    }
-}
-
-// FUNCIÓN UNIFICADA: Encontrar proceso por PID
-function encontrarProcesoPorPID(pid) {
-    if (!memoriaManager) return null;
-    
-    if (memoriaManager.marcos) {
-        for (let marco of memoriaManager.marcos) {
-            if (marco.ocupado && marco.proceso && marco.proceso.PID === pid) {
-                return marco.proceso;
-            }
-        }
-    } else if (memoriaManager.particiones) {
-        for (let particion of memoriaManager.particiones) {
-            if (particion.estado && particion.proceso && particion.proceso.PID === pid) {
-                return particion.proceso;
-            }
-        }
-    }
-    return null;
 }
 
 // Configurar estrategia de algoritmo
@@ -472,6 +283,40 @@ function configurarEstrategiaAlgoritmo() {
     memoriaManager.estrategiaAlgoritmo = estrategia;
 }
 
+// Actualizar lista para eliminación
+function actualizarListaEliminacion() {
+    const select = document.getElementById("proceso-eliminar");
+    select.innerHTML = '';
+
+    if (!memoriaManager) {
+        select.innerHTML = '<option value="">No hay procesos</option>';
+        return;
+    }
+
+    // En paginación, un proceso puede ocupar múltiples marcos
+    // Usar Set para evitar duplicados
+    const procesosActivos = new Map();
+    
+    memoriaManager.marcos.forEach(marco => {
+        if (marco.ocupado && marco.proceso && marco.proceso.nombreProceso !== 'SO') {
+            const pid = marco.proceso.PID;
+            if (!procesosActivos.has(pid)) {
+                procesosActivos.set(pid, marco.proceso);
+            }
+        }
+    });
+
+    if (procesosActivos.size === 0) {
+        select.innerHTML = '<option value="">No hay procesos para eliminar</option>';
+    } else {
+        procesosActivos.forEach((proceso, pid) => {
+            const option = document.createElement('option');
+            option.value = pid; // Usar PID como valor
+            option.textContent = `${proceso.nombreProceso} (PID: ${pid}, ${proceso.tamañoProceso} KiB)`;
+            select.appendChild(option);
+        });
+    }
+}
 
 // Botones dinamicos
 
@@ -485,15 +330,9 @@ function inicializarBotonesProcesos() {
 
         const botonSegmentos = document.createElement('button');
         botonSegmentos.textContent = "Editar segmentos";
-        botonSegmentos.addEventListener('click', () => {
-            // Crear una instancia temporal SOLO para mostrar/editar, pero guardar en el original
-            const procesoParaEditar = new Proceso(0, programa.nombre, programa.tamano);
-            
-            // Guardar referencia al programa original para poder actualizarlo
-            abrirVentanaSegmentos(procesoParaEditar, programa);
-        });
+        botonSegmentos.addEventListener('click', () => abrirVentanaSegmentos(programa));
 
-        // Botón para ver tabla (solo cuando el proceso esté cargado)
+        // NUEVO: Botón para ver tabla (solo cuando el proceso esté cargado)
         const botonVerTabla = document.createElement('button');
         botonVerTabla.textContent = "Ver tabla";
         botonVerTabla.addEventListener('click', () => {
@@ -503,11 +342,8 @@ function inicializarBotonesProcesos() {
                 abrirVentanaTablasProcesos();
                 // Seleccionar automáticamente este proceso
                 setTimeout(() => {
-                    const selector = document.getElementById('selector-proceso-tabla');
-                    if (selector) {
-                        selector.value = procesoCargado.PID;
-                        mostrarTablaProceso(procesoCargado.PID);
-                    }
+                    document.getElementById('selector-proceso-tabla').value = procesoCargado.PID;
+                    mostrarTablaProceso(procesoCargado.PID);
                 }, 100);
             } else {
                 alert("El proceso debe estar cargado en memoria para ver su tabla");
@@ -517,11 +353,7 @@ function inicializarBotonesProcesos() {
         nuevoLi.appendChild(botonProceso);
         nuevoLi.appendChild(botonSegmentos);
         nuevoLi.appendChild(botonVerTabla);
-        
-        const menuProcesosPredeterminados = document.getElementById("menu-procesos");
-        if (menuProcesosPredeterminados) {
-            menuProcesosPredeterminados.appendChild(nuevoLi);
-        }
+        menuProcesosPredeterminados.appendChild(nuevoLi);
     });
 }
 
@@ -548,55 +380,25 @@ function encontrarProcesoPorNombre(nombre) {
     return null;
 }
 
-function abrirVentanaSegmentos(procesoParaEditar, programaOriginal) {
-    console.log("Proceso para editar:", procesoParaEditar);
-    
-    // Validación robusta
-    if (!procesoParaEditar) {
-        console.error("Proceso para editar es undefined");
-        alert("Error: No se recibió un proceso válido");
-        return;
-    }
-
-    if (!procesoParaEditar.tablaSegmentos || !Array.isArray(procesoParaEditar.tablaSegmentos)) {
-        console.error("tablaSegmentos no existe o no es un array:", procesoParaEditar.tablaSegmentos);
-        alert("Error: El proceso no tiene una tabla de segmentos válida");
-        return;
-    }
-
+function abrirVentanaSegmentos(programa) {
     const modal = document.getElementById("ventana-segmentos");
     const lista = document.getElementById("lista-segmentos");
     const titulo = document.getElementById("titulo-segmentos");
 
-    if (!modal || !lista || !titulo) {
-        console.error("No se encontraron elementos del DOM necesarios");
-        return;
-    }
-
     // Actualiza el título
-    titulo.textContent = `Segmentos de ${procesoParaEditar.nombreProceso}`;
+    titulo.textContent = `Segmentos de ${programa.nombre}`;
 
     // Limpia la lista anterior
     lista.innerHTML = "";
 
-    // Crea los campos para modificar los tamaños - CON RESTRICCIONES
-    procesoParaEditar.tablaSegmentos.forEach((seg, index) => {
+    // Crea los campos para modificar los tamaños
+    programa.segmentos.forEach((seg, index) => {
         const divSeg = document.createElement("div");
         divSeg.classList.add("segmento-item");
 
-        // Determinar si el segmento es editable basado en sus permisos
-        const esEditable = !seg.permiso || seg.permiso.includes('W');
-        const esSoloLectura = !esEditable;
-        
         divSeg.innerHTML = `
-        <label>${seg.nombre} ${esSoloLectura ? '(No modificable)' : ''}:</label>
-        <input type="number" 
-                value="${seg.tamaño}" 
-                id="seg-${index}" 
-                min="1"
-                ${esSoloLectura ? 'readonly' : ''}
-                style="${esSoloLectura ? 'background-color: #f0f0f0; color: #666;' : ''}">
-        <small>Permisos: ${seg.permiso || 'RW'}</small>
+        <label>${seg.nombre}:</label>
+        <input type="number" value="${seg.tamaño}" id="seg-${index}" min="1">
         `;
 
         lista.appendChild(divSeg);
@@ -607,64 +409,20 @@ function abrirVentanaSegmentos(procesoParaEditar, programaOriginal) {
 
     // Botón guardar
     const botonGuardar = document.getElementById("guardar-segmentos");
-    if (botonGuardar) {
-        // Remover event listeners anteriores para evitar duplicados
-        botonGuardar.replaceWith(botonGuardar.cloneNode(true));
-        const nuevoBotonGuardar = document.getElementById("guardar-segmentos");
-        
-        nuevoBotonGuardar.onclick = function() {
-            let total = 0;
-            const nuevosSegmentos = [];
-            
-            procesoParaEditar.tablaSegmentos.forEach((seg, index) => {
-                const input = document.getElementById(`seg-${index}`);
-                if (input && !isNaN(parseInt(input.value))) {
-                    const nuevoTam = parseInt(input.value);
-                    
-                    // VERIFICAR PERMISOS antes de permitir modificación
-                    const esEditable = !seg.permiso || seg.permiso.includes('W');
-                    
-                    if (esEditable) {
-                        nuevosSegmentos.push({
-                            nombre: seg.nombre,
-                            tamaño: nuevoTam,
-                            permiso: seg.permiso
-                        });
-                        total += nuevoTam;
-                    } else {
-                        // Para segmentos no editables, mantener el tamaño original
-                        nuevosSegmentos.push({
-                            nombre: seg.nombre,
-                            tamaño: seg.tamaño, // Mantener tamaño original
-                            permiso: seg.permiso
-                        });
-                        total += seg.tamaño;
-                        console.log(`Segmento ${seg.nombre} no es modificable (permisos: ${seg.permiso})`);
-                    }
-                }
-            });
+    botonGuardar.onclick = function() {
+        let total = 0;
+        programa.segmentos.forEach((seg, index) => {
+        const nuevoTam = parseInt(document.getElementById(`seg-${index}`).value);
+        seg.tamaño = nuevoTam;
+        total += nuevoTam;
+        });
 
-            // ACTUALIZAR EL PROGRAMA ORIGINAL con los nuevos tamaños
-            if (programaOriginal) {
-                programaOriginal.tamano = total;
-                // Guardar la configuración de segmentos para uso futuro
-                programaOriginal.segmentosConfig = nuevosSegmentos;
-            }
+        // Actualiza el tamaño total del programa según los segmentos
+        programa.tamano = total;
 
-            alert(`Segmentos actualizados para ${procesoParaEditar.nombreProceso}. Tamaño total: ${total} KiB\n\nNota: Los segmentos de solo lectura (Código) no se pueden modificar.`);
-            modal.style.display = "none";
-            
-            console.log("Programa original actualizado:", programaOriginal);
-        };
-    }
-
-    // Botón cerrar
-    const botonCerrar = modal.querySelector('button[onclick]');
-    if (botonCerrar) {
-        botonCerrar.onclick = function() {
-            modal.style.display = 'none';
-        };
-    }
+        alert(`Segmentos actualizados para ${programa.nombre}. Tamaño total: ${total} KiB`);
+        modal.style.display = "none";
+    };
 }
 
 // Función para abrir la ventana de tablas
@@ -686,28 +444,25 @@ function actualizarSelectorProcesos() {
     
     if (!memoriaManager) return;
     
-    // Obtener procesos únicos (pueden tener múltiples particiones/segmentos)
-    const procesosUnicos = [];
-    const procesosVistos = new Set();
+    // En paginación, evitar duplicados de procesos
+    const procesosUnicos = new Map();
     
-    memoriaManager.particiones.forEach(particion => {
-        if (particion.estado && particion.proceso && particion.proceso.nombreProceso !== 'SO') {
-            if (!procesosVistos.has(particion.proceso.PID)) {
-                procesosVistos.add(particion.proceso.PID);
-                procesosUnicos.push(particion.proceso);
+    memoriaManager.marcos.forEach(marco => {
+        if (marco.ocupado && marco.proceso && marco.proceso.nombreProceso !== 'SO') {
+            const pid = marco.proceso.PID;
+            if (!procesosUnicos.has(pid)) {
+                procesosUnicos.set(pid, marco.proceso);
             }
         }
     });
     
-    // Añadir opciones al selector
-    procesosUnicos.forEach(proceso => {
+    procesosUnicos.forEach((proceso, pid) => {
         const option = document.createElement('option');
-        option.value = proceso.PID;
-        option.textContent = `${proceso.nombreProceso} (PID: ${proceso.PID})`;
+        option.value = pid;
+        option.textContent = `${proceso.nombreProceso} (PID: ${pid})`;
         selector.appendChild(option);
     });
     
-    // Añadir evento al selector
     selector.onchange = function() {
         const pidSeleccionado = parseInt(this.value);
         if (pidSeleccionado) {
@@ -716,6 +471,49 @@ function actualizarSelectorProcesos() {
             ocultarTablas();
         }
     };
+}
+
+// Mostrar tabla de un proceso específico
+function mostrarTablaProceso(pid) {
+    const proceso = encontrarProcesoPorPID(pid);
+    if (!proceso) return;
+    
+    // Mostrar información general
+    document.getElementById('info-proceso-tabla').style.display = 'block';
+    document.getElementById('nombre-proceso-tabla').textContent = proceso.nombreProceso;
+    document.getElementById('pid-proceso-tabla').textContent = proceso.PID;
+    document.getElementById('tamano-proceso-tabla').textContent = proceso.tamañoProceso + ' KiB';
+    
+    // DIFERENCIADO POR TIPO DE MEMORIA
+    if (particionElegida === 'Paginación') {
+        mostrarTablaPaginasProceso(pid);
+        mostrarMapaMemoriaPaginacion(pid);
+    } else if (particionElegida === 'Segmentación Pura') {
+        mostrarTablaSegmentos(proceso);
+        mostrarMapaMemoriaProceso(proceso);
+    }
+}
+// Encontrar proceso por PID
+function encontrarProcesoPorPID(pid) {
+    if (!memoriaManager) return null;
+    
+    // Verificar si es paginación (tiene marcos)
+    if (memoriaManager.marcos) {
+        for (let marco of memoriaManager.marcos) {
+            if (marco.ocupado && marco.proceso && marco.proceso.PID === pid) {
+                return marco.proceso;
+            }
+        }
+    } 
+    // Para otros tipos (tienen particiones)
+    else if (memoriaManager.particiones) {
+        for (let particion of memoriaManager.particiones) {
+            if (particion.estado && particion.proceso && particion.proceso.PID === pid) {
+                return particion.proceso;
+            }
+        }
+    }
+    return null;
 }
 
 // Mostrar tabla de segmentos
@@ -862,6 +660,18 @@ function mostrarTablaPaginasProceso(pid) {
     document.getElementById('contenedor-tabla-segmentos').style.display = 'block';
 }
 
+// Función para traducción de direcciones (demo)
+function demostrarTraduccionDireccion(proceso, segmentoId, desplazamiento) {
+    try {
+        const direccionFisica = proceso.traducirDireccion(segmentoId, desplazamiento);
+        console.log(`Traducción: Segmento ${segmentoId} + ${desplazamiento} = 0x${direccionFisica.toString(16).toUpperCase()}`);
+        return direccionFisica;
+    } catch (error) {
+        console.error('Error en traducción:', error.message);
+        return null;
+    }
+}
+
 // Event Listeners
 function inicializarEventListeners() {
     // Botón para seleccionar tipo de partición
@@ -894,15 +704,6 @@ function inicializarEventListeners() {
         alert("Primero selecciona partición y algoritmo");
         } else {
         document.getElementById("menu-procesos").style.display = "flex";
-        }
-    });
-
-    // Botón para añadir proceso
-    document.getElementById("btn-anadir-proceso").addEventListener("click", () => {
-        if (!particionElegida || !algoritmoElegido) {
-            alert("Primero selecciona partición y algoritmo");
-        } else {
-            menuAnadirP.style.display = "flex";
         }
     });
 

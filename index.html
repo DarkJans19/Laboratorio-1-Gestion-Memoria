@@ -48,6 +48,7 @@
         <li><button id="btn-particion-dinamica-sin">Dinámica (sin compactación)</button></li>
         <li><button id="btn-particion-dinamica-con">Dinámica (con compactación)</button></li>
         <li><button id="btn-particion-segmentada">Segmentación Pura</button></li>
+        <li><button id="btn-particion-paginada">Paginación</button></li>
       </ul>
       <button id="cerrar-particion">Cerrar</button>
     </div>
@@ -75,28 +76,28 @@
     </div>
   </div>
 
-  <div id="ventana-segmentos" class="ventana-modal" style="display:none;">
-    <div class="ventana-contenido">
-      <h2 id="titulo-segmentos">Segmentos</h2>
-      <div id="lista-segmentos"></div>
-      <button id="guardar-segmentos">Guardar</button>
-      <button onclick="document.getElementById('ventana-segmentos').style.display='none'">Cerrar</button>
-    </div>
+<div id="ventana-segmentos" class="ventana-modal" style="display:none;">
+  <div class="ventana-contenido">
+    <h2 id="titulo-segmentos">Segmentos</h2>
+    <div id="lista-segmentos"></div>
+    <button id="guardar-segmentos">Guardar</button>
+    <button onclick="document.getElementById('ventana-segmentos').style.display='none'">Cerrar</button>
   </div>
+</div>
 
-  <div id="menu-anadirproceso" class="ventana-oculta">
-    <div class="ventana-contenido">
-      <h2>Añadir nuevo proceso</h2>
-      <form id="form-anadir-proceso">
-        <label for="nombre-proceso">Nombre del proceso:</label><br>
-        <input type="text" id="nombre-proceso"><br><br>
-        <label for="tamano-proceso">Tamaño (KiB):</label><br>
-        <input type="number" id="tamano-proceso"><br><br>
-        <button id="btn-agregar-proceso" type="button">Agregar</button>
-      </form>
-      <button id="cerrar-anadir">Cerrar</button>
-    </div>
+<div id="menu-anadirproceso" class="ventana-oculta">
+  <div class="ventana-contenido">
+    <h2>Añadir nuevo proceso</h2>
+    <form id="form-anadir-proceso">
+      <label for="input-nombre-proceso">Nombre del proceso:</label><br>
+      <input type="text" id="input-nombre-proceso"><br><br>
+      <label for="input-tamano-proceso">Tamaño (KiB):</label><br>
+      <input type="number" id="input-tamano-proceso"><br><br>
+      <button id="btn-agregar-proceso" type="button">Agregar</button>
+    </form>
+    <button id="cerrar-anadir">Cerrar</button>
   </div>
+</div>
 
   <div id="menu-eliminar-proceso" class="ventana-oculta">
     <div class="ventana-contenido">
@@ -178,6 +179,7 @@
   <script type="module" src="Memoria/MemoriaEstaticaVariable.js"></script>
   <script type="module" src="Memoria/MemoriaDinamicaSinCompactacion.js"></script>
   <script type="module" src="Memoria/MemoriaDinamicaConCompactacion.js"></script>
+  <script type="module" src="Memoria/MemoriaPaginada.js"></script>
   <script type="module" src="Memoria/MemoriaSegmentada.js"></script>
   <script src = "Constantes.js"></script>
   <script type="module" src="Main.js"></script>
