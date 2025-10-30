@@ -82,31 +82,6 @@ function inicializarMemoriaConSO() {
     }
 }
 
-// Precargar programas predefinidos
-/*
-function precargarProgramas() {
-    if (!memoriaManager) return;
-    
-    let programasAsignados = 0;
-    
-    PROGRAMAS_PREDEFINIDOS.forEach(programa => {
-        if (programasAsignados < 5) {
-            const proceso = new Proceso(proximoPID++, programa.nombre, programa.tamano);
-            
-            try {
-                memoriaManager.añadirProceso(proceso);
-                procesos.push(`${programa.nombre} (${programa.tamano} KiB)`);
-                programasAsignados++;
-            } catch (error) {
-                console.log(`No se pudo asignar ${programa.nombre}: ${error.message}`);
-            }
-        }
-    });
-    
-    refrescarVista();
-}
-*/
-
 function actualizarVisualizacionMemoria() {
     if (!memoriaManager) return;
     
@@ -217,6 +192,18 @@ function asignarProceso(procesoData) {
     
     try {
         const proceso = new Proceso(proximoPID++, procesoData.nombre, procesoData.tamano);
+        
+        // Si hay configuración de segmentos guardada, aplicarla
+        if (procesoData.segmentosConfig) {
+            proceso.tablaSegmentos.forEach((seg, index) => {
+                if (procesoData.segmentosConfig[index]) {
+                    seg.tamaño = procesoData.segmentosConfig[index].tamaño;
+                }
+            });
+            // Recalcular tamaño total basado en segmentos
+            proceso._tamañoProceso = proceso.tablaSegmentos.reduce((total, seg) => total + seg.tamaño, 0);
+        }
+        
         memoriaManager.añadirProceso(proceso);
         procesos.push(`${procesoData.nombre} (${procesoData.tamano} KiB)`);
         refrescarVista();
@@ -319,9 +306,15 @@ function inicializarBotonesProcesos() {
 
         const botonSegmentos = document.createElement('button');
         botonSegmentos.textContent = "Editar segmentos";
-        botonSegmentos.addEventListener('click', () => abrirVentanaSegmentos(programa));
+        botonSegmentos.addEventListener('click', () => {
+            // Crear una instancia temporal SOLO para mostrar/editar, pero guardar en el original
+            const procesoParaEditar = new Proceso(0, programa.nombre, programa.tamano);
+            
+            // Guardar referencia al programa original para poder actualizarlo
+            abrirVentanaSegmentos(procesoParaEditar, programa);
+        });
 
-        // NUEVO: Botón para ver tabla (solo cuando el proceso esté cargado)
+        // Botón para ver tabla (solo cuando el proceso esté cargado)
         const botonVerTabla = document.createElement('button');
         botonVerTabla.textContent = "Ver tabla";
         botonVerTabla.addEventListener('click', () => {
@@ -331,8 +324,11 @@ function inicializarBotonesProcesos() {
                 abrirVentanaTablasProcesos();
                 // Seleccionar automáticamente este proceso
                 setTimeout(() => {
-                    document.getElementById('selector-proceso-tabla').value = procesoCargado.PID;
-                    mostrarTablaProceso(procesoCargado.PID);
+                    const selector = document.getElementById('selector-proceso-tabla');
+                    if (selector) {
+                        selector.value = procesoCargado.PID;
+                        mostrarTablaProceso(procesoCargado.PID);
+                    }
                 }, 100);
             } else {
                 alert("El proceso debe estar cargado en memoria para ver su tabla");
@@ -342,7 +338,11 @@ function inicializarBotonesProcesos() {
         nuevoLi.appendChild(botonProceso);
         nuevoLi.appendChild(botonSegmentos);
         nuevoLi.appendChild(botonVerTabla);
-        menuProcesosPredeterminados.appendChild(nuevoLi);
+        
+        const menuProcesosPredeterminados = document.getElementById("menu-procesos");
+        if (menuProcesosPredeterminados) {
+            menuProcesosPredeterminados.appendChild(nuevoLi);
+        }
     });
 }
 
@@ -358,25 +358,55 @@ function encontrarProcesoPorNombre(nombre) {
     return null;
 }
 
-function abrirVentanaSegmentos(programa) {
+function abrirVentanaSegmentos(procesoParaEditar, programaOriginal) {
+    console.log("Proceso para editar:", procesoParaEditar);
+    
+    // Validación robusta
+    if (!procesoParaEditar) {
+        console.error("Proceso para editar es undefined");
+        alert("Error: No se recibió un proceso válido");
+        return;
+    }
+
+    if (!procesoParaEditar.tablaSegmentos || !Array.isArray(procesoParaEditar.tablaSegmentos)) {
+        console.error("tablaSegmentos no existe o no es un array:", procesoParaEditar.tablaSegmentos);
+        alert("Error: El proceso no tiene una tabla de segmentos válida");
+        return;
+    }
+
     const modal = document.getElementById("ventana-segmentos");
     const lista = document.getElementById("lista-segmentos");
     const titulo = document.getElementById("titulo-segmentos");
 
+    if (!modal || !lista || !titulo) {
+        console.error("No se encontraron elementos del DOM necesarios");
+        return;
+    }
+
     // Actualiza el título
-    titulo.textContent = `Segmentos de ${programa.nombre}`;
+    titulo.textContent = `Segmentos de ${procesoParaEditar.nombreProceso}`;
 
     // Limpia la lista anterior
     lista.innerHTML = "";
 
-    // Crea los campos para modificar los tamaños
-    programa.segmentos.forEach((seg, index) => {
+    // Crea los campos para modificar los tamaños - CON RESTRICCIONES
+    procesoParaEditar.tablaSegmentos.forEach((seg, index) => {
         const divSeg = document.createElement("div");
         divSeg.classList.add("segmento-item");
 
+        // Determinar si el segmento es editable basado en sus permisos
+        const esEditable = !seg.permiso || seg.permiso.includes('W');
+        const esSoloLectura = !esEditable;
+        
         divSeg.innerHTML = `
-        <label>${seg.nombre}:</label>
-        <input type="number" value="${seg.tamaño}" id="seg-${index}" min="1">
+        <label>${seg.nombre} ${esSoloLectura ? '(No modificable)' : ''}:</label>
+        <input type="number" 
+                value="${seg.tamaño}" 
+                id="seg-${index}" 
+                min="1"
+                ${esSoloLectura ? 'readonly' : ''}
+                style="${esSoloLectura ? 'background-color: #f0f0f0; color: #666;' : ''}">
+        <small>Permisos: ${seg.permiso || 'RW'}</small>
         `;
 
         lista.appendChild(divSeg);
@@ -387,20 +417,64 @@ function abrirVentanaSegmentos(programa) {
 
     // Botón guardar
     const botonGuardar = document.getElementById("guardar-segmentos");
-    botonGuardar.onclick = function() {
-        let total = 0;
-        programa.segmentos.forEach((seg, index) => {
-        const nuevoTam = parseInt(document.getElementById(`seg-${index}`).value);
-        seg.tamaño = nuevoTam;
-        total += nuevoTam;
-        });
+    if (botonGuardar) {
+        // Remover event listeners anteriores para evitar duplicados
+        botonGuardar.replaceWith(botonGuardar.cloneNode(true));
+        const nuevoBotonGuardar = document.getElementById("guardar-segmentos");
+        
+        nuevoBotonGuardar.onclick = function() {
+            let total = 0;
+            const nuevosSegmentos = [];
+            
+            procesoParaEditar.tablaSegmentos.forEach((seg, index) => {
+                const input = document.getElementById(`seg-${index}`);
+                if (input && !isNaN(parseInt(input.value))) {
+                    const nuevoTam = parseInt(input.value);
+                    
+                    // VERIFICAR PERMISOS antes de permitir modificación
+                    const esEditable = !seg.permiso || seg.permiso.includes('W');
+                    
+                    if (esEditable) {
+                        nuevosSegmentos.push({
+                            nombre: seg.nombre,
+                            tamaño: nuevoTam,
+                            permiso: seg.permiso
+                        });
+                        total += nuevoTam;
+                    } else {
+                        // Para segmentos no editables, mantener el tamaño original
+                        nuevosSegmentos.push({
+                            nombre: seg.nombre,
+                            tamaño: seg.tamaño, // Mantener tamaño original
+                            permiso: seg.permiso
+                        });
+                        total += seg.tamaño;
+                        console.log(`Segmento ${seg.nombre} no es modificable (permisos: ${seg.permiso})`);
+                    }
+                }
+            });
 
-        // Actualiza el tamaño total del programa según los segmentos
-        programa.tamano = total;
+            // ACTUALIZAR EL PROGRAMA ORIGINAL con los nuevos tamaños
+            if (programaOriginal) {
+                programaOriginal.tamano = total;
+                // Guardar la configuración de segmentos para uso futuro
+                programaOriginal.segmentosConfig = nuevosSegmentos;
+            }
 
-        alert(`Segmentos actualizados para ${programa.nombre}. Tamaño total: ${total} KiB`);
-        modal.style.display = "none";
-    };
+            alert(`Segmentos actualizados para ${procesoParaEditar.nombreProceso}. Tamaño total: ${total} KiB\n\nNota: Los segmentos de solo lectura (Código) no se pueden modificar.`);
+            modal.style.display = "none";
+            
+            console.log("Programa original actualizado:", programaOriginal);
+        };
+    }
+
+    // Botón cerrar
+    const botonCerrar = modal.querySelector('button[onclick]');
+    if (botonCerrar) {
+        botonCerrar.onclick = function() {
+            modal.style.display = 'none';
+        };
+    }
 }
 
 // Función para abrir la ventana de tablas
