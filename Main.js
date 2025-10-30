@@ -279,19 +279,39 @@ function mostrarInformacionMemoria() {
     } else {
         // SEGMENTACIÓN Y OTROS
         const particionesLibres = memoriaManager.particiones.filter(p => !p.estado).length;
+        
+        // MEMORIA USADA: Sumar el tamaño REAL ocupado (segmentos o procesos)
         const memoriaUsada = memoriaManager.particiones
             .filter(p => p.estado)
-            .reduce((total, p) => total + (p.proceso?.tamañoProceso || 0), 0);
+            .reduce((total, p) => {
+                if (p.segmento) {
+                    // Segmentación: usar tamaño del segmento
+                    return total + p.segmento.tamaño;
+                } else {
+                    // Otros: usar tamaño del proceso
+                    return total + p.proceso.tamañoProceso;
+                }
+            }, 0);
         
+        // FRAGMENTACIÓN INTERNA: Espacio asignado pero no utilizado
         const fragmentacionInterna = memoriaManager.particiones
             .filter(p => p.estado)
-            .reduce((total, p) => total + (p.tamañoParticion - p.proceso.tamañoProceso), 0);
+            .reduce((total, p) => {
+                if (p.segmento) {
+                    // Segmentación: diferencia entre tamaño partición y tamaño segmento
+                    return total + (p.tamañoParticion - p.segmento.tamaño);
+                } else {
+                    // Otros: diferencia entre tamaño partición y tamaño proceso
+                    return total + (p.tamañoParticion - p.proceso.tamañoProceso);
+                }
+            }, 0);
 
         html = `
             <ul>
                 <li>Particiones libres: ${particionesLibres}</li>
                 <li>Memoria usada: ${memoriaUsada} KiB</li>
-                <li>Fragmentación interna: ${fragmentacionInterna} KiB</li>
+                <li>Fragmentación interna: ${Math.max(0, fragmentacionInterna)} KiB</li>
+                <li>Total particiones: ${memoriaManager.particiones.length}</li>
             </ul>
         `;
     }
