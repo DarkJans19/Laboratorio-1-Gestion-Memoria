@@ -16,7 +16,18 @@ export class MemoriaSegmentada extends Memoria {
     añadirProceso(proceso) {
         console.log("Asignando proceso con segmentación:", proceso.nombreProceso);
         
-        // Intentar asignar CADA SEGMENTO del proceso
+        // Verificar si hay espacio suficiente para TODOS los segmentos
+        const espacioTotalNecesario = proceso.tablaSegmentos.reduce((total, seg) => total + seg.tamaño, 0);
+        const espacioTotalLibre = this.particiones
+            .filter(p => !p.estado)
+            .reduce((total, p) => total + p.tamañoParticion, 0);
+        
+        if (espacioTotalNecesario > espacioTotalLibre) {
+            console.log(`No hay espacio suficiente para el proceso ${proceso.nombreProceso}`);
+            return false;
+        }
+
+        // Intentar asignar CADA SEGMENTO del proceso individualmente
         const segmentosAsignados = [];
         let todosAsignados = true;
 
@@ -74,16 +85,23 @@ export class MemoriaSegmentada extends Memoria {
         let procesoEliminado = false;
         
         // Buscar todas las particiones que pertenecen a este proceso
-        this.particiones.forEach(particion => {
-            if (particion.proceso && particion.proceso.PID === PID) {
-                // Limpiar referencia en la tabla de segmentos
-                if (particion.segmento) {
-                    particion.segmento.direccionFisica = null;
-                    particion.segmento.particionAsignada = null;
-                }
-                particion.eliminarProceso();
-                procesoEliminado = true;
+        const particionesProceso = this.particiones.filter(
+            particion => particion.proceso && particion.proceso.PID === PID
+        );
+        
+        if (particionesProceso.length === 0) {
+            return false;
+        }
+        
+        // Liberar todas las particiones del proceso
+        particionesProceso.forEach(particion => {
+            // Limpiar referencia en la tabla de segmentos
+            if (particion.segmento) {
+                particion.segmento.direccionFisica = null;
+                particion.segmento.particionAsignada = null;
             }
+            particion.eliminarProceso();
+            procesoEliminado = true;
         });
         
         if (procesoEliminado) {
@@ -135,19 +153,38 @@ export class MemoriaSegmentada extends Memoria {
     }
 
     fusionarParticion() {
-        for(let i = 0; i < this.particiones.length - 1; i++) {
-            if (!this.particiones[i].estado && !this.particiones[i+1].estado) {
-                let particionFusionada = new Particion(
-                    null, 
-                    false, 
-                    this.particiones[i].tamañoParticion + this.particiones[i+1].tamañoParticion,
-                    this.particiones[i].direccionInicio, 
-                    this.particiones[i+1].direccionFinal
-                );
-                this.particiones.splice(i, 2, particionFusionada);
-                i--;
+        let fusionOcurrida = true;
+        
+        // Continuar fusionando hasta que no haya más fusiones posibles
+        while (fusionOcurrida) {
+            fusionOcurrida = false;
+            
+            for(let i = 0; i < this.particiones.length - 1; i++) {
+                if (!this.particiones[i].estado && !this.particiones[i+1].estado) {
+                    let particionFusionada = new Particion(
+                        null, 
+                        false, 
+                        this.particiones[i].tamañoParticion + this.particiones[i+1].tamañoParticion,
+                        this.particiones[i].direccionInicio, 
+                        this.particiones[i+1].direccionFinal
+                    );
+                    this.particiones.splice(i, 2, particionFusionada);
+                    fusionOcurrida = true;
+                    i--; // Revisar la misma posición nuevamente
+                }
             }
         }
+    }
+
+    // Método mejorado para buscar huecos que tenga en cuenta la fragmentación
+    buscarHuecosDisponibles() {
+        return this.particiones
+            .filter(p => !p.estado)
+            .map(p => ({
+                tamaño: p.tamañoParticion,
+                direccion: p.direccionInicio,
+                particion: p
+            }));
     }
 
     // Visualización especial para segmentación
@@ -165,5 +202,21 @@ export class MemoriaSegmentada extends Memoria {
             }
         });
         return segmentos;
+    }
+
+    // Método para obtener información de fragmentación
+    obtenerEstadisticasFragmentacion() {
+        const particionesLibres = this.particiones.filter(p => !p.estado);
+        const totalEspacioLibre = particionesLibres.reduce((total, p) => total + p.tamañoParticion, 0);
+        const fragmentacionExterna = particionesLibres.length > 1 ? totalEspacioLibre : 0;
+        
+        return {
+            totalParticiones: this.particiones.length,
+            particionesLibres: particionesLibres.length,
+            espacioLibreTotal: totalEspacioLibre,
+            fragmentacionExterna: fragmentacionExterna,
+            mayorHueco: particionesLibres.length > 0 ? 
+                Math.max(...particionesLibres.map(p => p.tamañoParticion)) : 0
+        };
     }
 }
