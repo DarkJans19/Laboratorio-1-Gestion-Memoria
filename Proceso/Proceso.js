@@ -17,13 +17,21 @@ export class Proceso {
         this.tablaSegmentos = [];
         
         // Crear segmentos con tamaños proporcionales
+        let tamañoTotalSegmentos = 0;
         const segmentosConfig = [
-            { nombre: "BSS", tamaño: Math.floor(this.tamañoProceso * 0.1) },
-            { nombre: "Código", tamaño: Math.floor(this.tamañoProceso * 0.3) },
-            { nombre: "Datos", tamaño: Math.floor(this.tamañoProceso * 0.2) },
+            { nombre: "BSS", tamaño: Math.floor(this._tamañoProceso * 0.1) },
+            { nombre: "Código", tamaño: Math.floor(this._tamañoProceso * 0.3) },
+            { nombre: "Datos", tamaño: Math.floor(this._tamañoProceso * 0.2) },
             { nombre: "Heap", tamaño: 64 },
             { nombre: "Stack", tamaño: 128 }
         ];
+        
+        segmentosConfig.forEach(config => {
+            tamañoTotalSegmentos += config.tamaño;
+        });
+        
+        // Ajustar el tamaño del proceso al real
+        this._tamañoProceso = tamañoTotalSegmentos;
         
         let direccionBase = 0;
         segmentosConfig.forEach((config, index) => {

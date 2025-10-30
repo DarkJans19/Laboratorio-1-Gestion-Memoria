@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', function() {
     inicializarBotonesProcesos();
 });
 
-// 2. FUNCIÓN FALTANTE - actualizarListaProcesos()
 function actualizarListaProcesos() {
     const listaProcesosEl = document.getElementById('lista-procesos');
     if (!listaProcesosEl) return;
@@ -40,8 +39,10 @@ function actualizarListaProcesos() {
     html += '</ul>';
     
     listaProcesosEl.innerHTML = html;
+    
+    // También actualizar el selector de procesos para eliminación
+    actualizarListaEliminacion();
 }
-
 // Actualizar toda la interfaz
 function refrescarVista() {
     if (memoriaManager) {
@@ -329,22 +330,32 @@ function asignarProceso(procesoData) {
     try {
         const proceso = new Proceso(proximoPID++, procesoData.nombre, procesoData.tamano);
         
-        // Solo aplicar segmentos si es segmentación
-        if (particionElegida === 'Segmentación Pura' && procesoData.segmentosConfig) {
+        // PARA TODOS los tipos de memoria, usar el tamaño real
+        if (procesoData.segmentosConfig) {
             proceso.tablaSegmentos.forEach((seg, index) => {
                 if (procesoData.segmentosConfig[index]) {
                     seg.tamaño = procesoData.segmentosConfig[index].tamaño;
                 }
             });
+            // Siempre recalcular el tamaño real
             proceso._tamañoProceso = proceso.tablaSegmentos.reduce((total, seg) => total + seg.tamaño, 0);
         }
         
-        memoriaManager.añadirProceso(proceso);
-        procesos.push(`${procesoData.nombre} (${procesoData.tamano} KiB)`);
-        refrescarVista();
-        return true;
+        // Intentar añadir el proceso a la memoria
+        const resultado = memoriaManager.añadirProceso(proceso);
+        
+        if (resultado !== false) { // Algunos métodos pueden retornar false explícitamente
+            // Agregar a la lista de procesos para mostrar en la interfaz
+            procesos.push(`${procesoData.nombre} (${proceso.tamañoProceso} KiB)`);
+            refrescarVista();
+            return true;
+        } else {
+            console.error("No se pudo asignar el proceso - memoriaManager.añadirProceso retornó false");
+            return false;
+        }
     } catch (error) {
         console.error("Error al asignar proceso:", error);
+        alert(`Error al asignar proceso: ${error.message}`);
         return false;
     }
 }
@@ -499,9 +510,16 @@ function inicializarBotonesProcesos() {
     PROGRAMAS_PREDEFINIDOS.forEach(programa => {
         const nuevoLi = document.createElement("li");
 
+        // En inicializarBotonesProcesos(), actualiza el event listener:
         const botonProceso = document.createElement('button');
         botonProceso.textContent = programa.nombre;
-        botonProceso.addEventListener('click', () => asignarProceso(programa));
+        botonProceso.addEventListener('click', () => {
+            if (asignarProceso(programa)) {
+                console.log(`Proceso ${programa.nombre} asignado correctamente`);
+            } else {
+                alert(`No se pudo asignar el proceso ${programa.nombre} - No hay espacio suficiente`);
+            }
+        });
 
         const botonSegmentos = document.createElement('button');
         botonSegmentos.textContent = "Editar segmentos";
